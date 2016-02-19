@@ -5,6 +5,8 @@ Alarm clock based on Raspberry Pi
 Index
 -----
 
+- [Hardware](Hardware)
+- [Software](Software)
 - [Plan van aanpak](PLAN.md)
 - [Logboek](LOG.md)
 - [ToDo](TODO.md)
