@@ -5,4 +5,8 @@ License
 
 All rights reserved. 
 
-This project was made for a cource in IT - Electronics at [Thomas More College](http://www.thomasmore.be/) (Belgium).
+Some parts of this project may be under different (open) licenses, see sub-directories and files.
+
+This project was made for a cource in Professional Batchelor IT - Electronics at [Thomas More College](http://www.thomasmore.be/) @ Campus De Nayer (Belgium).
+
+Thomas More Mechelen-Antwerpen vzw is granted a non-exclusive, non-transferable, worldwide, unlimited license to view, download, use and reproduce the applicable works in this repository.
