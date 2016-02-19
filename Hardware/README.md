@@ -6,6 +6,7 @@ Datasheets
 
 - [RTC DS3231](DS3231.pdf)
 - [DAC pcm5102a](pcm5102a.pdf)
+- [LCD ILI9341](ILI9341.pdf)
 
 Spanningen
 ----------
