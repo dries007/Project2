@@ -7,7 +7,6 @@ Index
 
 - [Hardware](Hardware)
 - [Software](Software)
-- [Site](Site)
 - [Plan van aanpak](PLAN.md)
 - [Project voorstel](Projectvoorstel.1.docx)
 - [Gantt chart](Gantt_project2.gan)
