@@ -11,6 +11,7 @@ Datasheets
 - [Audio Amplifier TPA2016D2RTJR](slos524d-122167.pdf)
 - [I²C Levelshifter BSS138](AN10441.pdf)
 - [Rotary Encoder ECN11E](ECN11.pdf)
+- [NOR gates](74HC_HCT4002-839393.pdf)
 
 Eigenschappen
 -------------
