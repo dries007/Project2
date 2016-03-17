@@ -10,3 +10,5 @@ Datum				| Entry
 07/03/2016  | Configureren Raspberry pi (wifi), Componenten tekenen in altium.
 10/03/2016  | Webinterface en access point
 14/03/2016  | Webinterface vervolg (Keuze selecties en blokkeren nodige velden) , Tekenen PCB componenten
+17/03/2016  | Tekenen PCB en google calendar API
+
