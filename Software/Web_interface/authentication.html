@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <!doctype html>
 <html>
 <head>
@@ -55,3 +56,57 @@
 </div>
 </body>
 </html>
+=======
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="bootstrap-3.3.6-dist\css\bootstrap.min.css">
+    <!-- Optional theme -->
+    <!--<link rel="stylesheet" href="bootstrap-3.3.6-dist\js\bootstrap.min.js">-->
+    <link rel="stylesheet" href="webinterface.css">
+    <script src="jquery-ui-1.11.4.custom\jquery-ui-1.11.4.custom\external\jquery\jquery.js"></script>
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="bootstrap-3.3.6-dist\js\bootstrap.min.js"></script>
+    <title>Webinterface Captive Portal</title>
+    <script type="text/javascript">
+        <!--
+        //create a global variable to store the parsed json file ==> usable in all the functions.
+        var jsonresp="";
+        //If the page is loaded, get the available network information. ==> ajax request to /api/WiFiList routed by api.py to return json file.
+        $(document).ready(function(){
+            $.ajax({ url: "#",
+                context: document.body,
+                success: function(response){
+                    //Store a parsed version of the returned jsonfile textfile in the global variable jsonresp for global availability
+                    jsonresp = jQuery.parseJSON(response);
+                }});
+        });
+        //-->
+    </script>
+</head>
+<body>
+<div class="fixwidth container">
+    <h1>Authentication information</h1>
+    <form class="form-horizontal">
+        <div class="form-group">
+            <label for="verURL" class="col-sm-2 control-label">verification:</label>
+            <div class="col-sm-10">
+                <input type="text" id="verURL" class="form-control" placeholder="verification URL">
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="usercode" class="col-sm-2 control-label">User code:</label>
+            <div class="col-sm-10">
+                <input type="password" class="form-control" id="usercode" placeholder="usercode">
+            </div>
+        </div>
+		<div class="form-group">
+			<p>Use an other device to go to the URL given above (verification). If the webpage is loaded it asks for a user code. Enter the user code given above and click next. The last step is to allow access to your calendar.</p>
+		</div>
+    </form>
+</div>
+</body>
+</html>
+>>>>>>> 1b7b4ff2d41f3c61c1098a84b20e4a26a9559d75
