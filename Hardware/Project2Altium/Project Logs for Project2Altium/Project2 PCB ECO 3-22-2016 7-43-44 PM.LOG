@@ -1,0 +1,5 @@
+Added Component: Designator=UART(HDR1X3)
+Added Pin To Net: NetName=NetC17_1 Pin=U4-15
+Added Pin To Net: NetName=GND Pin=UART-1
+Added Pin To Net: NetName=RX Pin=UART-2
+Added Pin To Net: NetName=TX Pin=UART-3
