@@ -11,5 +11,6 @@ Datum				| Entry
 10/03/2016  | Webinterface en access point
 14/03/2016  | Webinterface vervolg (Keuze selecties en blokkeren nodige velden) , Tekenen PCB componenten
 17/03/2016  | Tekenen PCB componenten en google calendar API
-21/03/2016  | Teken PCB lay-out en google calendar authentication
+21/03/2016  | Tekenen PCB lay-out en google calendar authentication
+24/03/2016  | Tekenen PCB lay-out, opvragen van calendar events en testen buzzer en powercap
 
