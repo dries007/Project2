@@ -8,6 +8,7 @@
 			<li data-target="#carousel-example-generic" data-slide-to="0" class="active"></li>
 			<li data-target="#carousel-example-generic" data-slide-to="1"></li>
 			<li data-target="#carousel-example-generic" data-slide-to="2"></li>
+			<li data-target="#carousel-example-generic" data-slide-to="3"></li>
 		  </ol>
 
 		  <!-- Wrapper for slides -->
@@ -28,6 +29,12 @@
 			  <img src="placeholder.png" alt="foto">
 			  <div class="carousel-caption">
 				<h3>foto3</h3>
+			  </div>
+			</div>
+			<div class="item">
+			  <img src="placeholder.png" alt="foto">
+			  <div class="carousel-caption">
+				<h3>foto4</h3>
 			  </div>
 			</div>
 		  </div>
