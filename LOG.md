@@ -13,5 +13,5 @@ Datum				| Entry
 17/03/2016  | Tekenen PCB componenten en google calendar API
 21/03/2016  | Tekenen PCB lay-out en google calendar authentication
 24/03/2016  | Tekenen PCB lay-out, opvragen van calendar events en testen buzzer en powercap
-12/04/2016  | Alternatieve display zoeken, refreshtoken google calendar, website template maken
-
+11/04/2016  | Alternatieve display zoeken, refreshtoken google calendar, website template maken
+14/04/2016  | Display drivers installeren en testen
