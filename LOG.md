@@ -15,3 +15,4 @@ Datum				| Entry
 24/03/2016  | Tekenen PCB lay-out, opvragen van calendar events en testen buzzer en powercap
 11/04/2016  | Alternatieve display zoeken, refreshtoken google calendar, website template maken
 14/04/2016  | Display drivers installeren en testen
+18/04/2016  | Display installeren op raspberry pi zero en permanente configuratie
