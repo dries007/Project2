@@ -7,9 +7,9 @@ from datetime import datetime
 
 
 def getverinfo():
-    url = "https://accounts.google.com/o/oauth2/device/code"
-    clientID = "806788990556-i96frm71oem88mn63qvsudbmvhrusesf.apps.googleusercontent.com"
-    scope = "https://www.googleapis.com/auth/calendar.readonly"
+    url = getjsonvalue('url')
+    clientID = getjsonvalue("client_id")
+    scope = getjsonvalue("scope")
     params = {'client_id': clientID, 'scope': scope}
     r = requests.post(url, data=params)
     data = json.loads(r.text)
@@ -20,6 +20,21 @@ def getverinfo():
     t1.start()
     return r.text
 
+def getjsonvalue(property_id):
+    tekst = open('authinfo').read()
+    d = json.loads(tekst)
+    return d[property_id]
+
+def getjsonaccess(prop_id):
+    tekst = open('API_tokens').read()
+    d = json.loads(tekst)
+    return d[prop_id]
+
+def savecal(data):
+    fh = open("calendardata", "w")
+    json.dump(data, fh, indent=2)
+    fh.close()
+
 #Opvragen van een code om authenticatie te bevestigen
 # Refreshtoken moet nog worden opgeslagen in langdurige opslag --> zo lang mogelijk gebruiken
 def checkauth(devcode, clientID, interv):
@@ -27,7 +42,7 @@ def checkauth(devcode, clientID, interv):
     while (test):
         url = "https://www.googleapis.com/oauth2/v4/token"
         grant_type = "http://oauth.net/grant_type/device/1.0"
-        clientsecret = "MFDHJWCHUl_CHAwokNvPXyR4"
+        clientsecret = getjsonvalue("client_secret")
         params = {'client_id': clientID, 'code': devcode, 'client_secret': clientsecret, 'grant_type': grant_type}
         resp = requests.post(url, data=params)
         resp.encoding = "application/x-www-form-urlencoded"
@@ -40,28 +55,40 @@ def checkauth(devcode, clientID, interv):
             test = 0
 
 # using the refresh token to get a new valid access token
-def refreshtoke(clientId, clientsecret, refreshtoken):
+def refreshtoke():
+    clientId = getjsonvalue("client_id")
+    clientsecret = getjsonvalue("client_secret")
+    refreshtoken = getjsonaccess("refresh_token")
     url = "https://www.googleapis.com/oauth2/v4/token"
     grant_type="refresh_token"
     params = {'client_id': clientId, 'client_secret': clientsecret, 'refresh_token': refreshtoken, 'grant_type': grant_type}
     resp = requests.post(url, data=params)
-    print ("testing")
+    next_auth = json.loads(resp.text)
+    fh = open("API_tokens.txt", "w")
+    current_auth = json.loads(fh.text)
+    current_auth["access_token"] = next_auth["access_token"]
+    print("testing")
     print(resp.text)
 
 # juiste data opvragen en filteren uit de response
 def savevalues(data):
     acc_tok = data["access_token"]
-    tokenty = data["token_type"]
-    expire = data["expires_in"]
-    refresh = data["refresh_token"]
+    fh = open("API_tokens", "w")
+    json.dump(data, fh, indent=2)
+    fh.close()
     tijd = datetime.now()
     tijd = tijd.isoformat("T") + "Z"
-    print (tijd)
+    print(tijd)
     url = "https://www.googleapis.com/calendar/v3/calendars/primary/events?access_token=" + acc_tok+"&timeMin="+tijd
     testing = requests.get(url)
     data = json.loads(testing.text)
-    for item in data['items']:
+    savecal(data)
+    printcalevents()
+    #refreshtoke("806788990556-i96frm71oem88mn63qvsudbmvhrusesf.apps.googleusercontent.com", "MFDHJWCHUl_CHAwokNvPXyR4", refresh)
+
+def printcalevents():
+    inputdata = open('calendardata').read()
+    values = json.loads(inputdata)
+    for item in values['items']:
         print(item['start']['dateTime'])
         print(item['summary'])
-    refreshtoke("806788990556-i96frm71oem88mn63qvsudbmvhrusesf.apps.googleusercontent.com", "MFDHJWCHUl_CHAwokNvPXyR4", refresh)
-
