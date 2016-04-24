@@ -64,9 +64,16 @@ def refreshtoke():
     params = {'client_id': clientId, 'client_secret': clientsecret, 'refresh_token': refreshtoken, 'grant_type': grant_type}
     resp = requests.post(url, data=params)
     next_auth = json.loads(resp.text)
-    fh = open("API_tokens.txt", "w")
-    current_auth = json.loads(fh.text)
+    fh = open("API_tokens.txt", "r")
+	tekst = fh.read()
+	fh.close()
+    current_auth = json.loads(tekst)
     current_auth["access_token"] = next_auth["access_token"]
+	###########
+	fh = open("API_tokens.txt", "w")
+	json.dump(current_auth, fh, indent=4)
+	fh.close()
+	###############
     print("testing")
     print(resp.text)
 
