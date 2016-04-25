@@ -11,5 +11,9 @@ Datum				| Entry
 10/03/2016  | Webinterface en access point
 14/03/2016  | Webinterface vervolg (Keuze selecties en blokkeren nodige velden) , Tekenen PCB componenten
 17/03/2016  | Tekenen PCB componenten en google calendar API
-21/03/2016  | Teken PCB lay-out en google calendar authentication
-
+21/03/2016  | Tekenen PCB lay-out en google calendar authentication
+24/03/2016  | Tekenen PCB lay-out, opvragen van calendar events en testen buzzer en powercap
+11/04/2016  | Alternatieve display zoeken, refreshtoken google calendar, website template maken
+14/04/2016  | Display drivers installeren en testen
+18/04/2016  | Display installeren op raspberry pi zero en permanente configuratie
+21/04/2016  | saving/reading of calendar data and tokens in json files + display framebuffer use testing

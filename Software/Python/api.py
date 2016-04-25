@@ -1,5 +1,6 @@
 #!/bin/env python
 import wifi
+import api_embedded
 
 from flask import Flask
 from flask import json
@@ -19,6 +20,14 @@ def pageNotFound(error):
 def wifiList():
     if request.method == 'GET':
         return Response(json.dumps(wifi.scanWifi()), mimetype='text/javascript')
+    else:
+
+        return 'OK?'
+
+@app.route("/Verification", methods=['GET', 'POST'])
+def verification():
+    if request.method == 'GET':
+        return Response(api_embedded.getverinfo())
     else:
 
         return 'OK?'

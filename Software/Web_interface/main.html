@@ -1,66 +1,109 @@
 <!doctype html>
 <html>
 <head>
-    <!-- Latest compiled and minified CSS -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
-
-    <!-- Optional theme -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
-
-    <!-- Latest compiled and minified JavaScript -->
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
     <meta charset="utf-8"/>
     <!-- Latest compiled and minified CSS -->
     <link rel="stylesheet" href="bootstrap-3.3.6-dist\css\bootstrap.min.css">
     <!-- Optional theme -->
     <!--<link rel="stylesheet" href="bootstrap-3.3.6-dist\js\bootstrap.min.js">-->
-    <<link rel="stylesheet" href="webinterface.css">
+    <link rel="stylesheet" href="webinterface.css">
     <script src="jquery-ui-1.11.4.custom\jquery-ui-1.11.4.custom\external\jquery\jquery.js"></script>
     <!-- Latest compiled and minified JavaScript -->
     <script src="bootstrap-3.3.6-dist\js\bootstrap.min.js"></script>
     <title>Webinterface Captive Portal</title>
     <script type="text/javascript">
         <!--
-        function start()
+        //create a global variable to store the parsed json file ==> usable in all the functions.
+        var jsonresp="";
+        //If the page is loaded, get the available network information. ==> ajax request to /api/WiFiList routed by api.py to return json file.
+        $(document).ready(function(){
+            $.ajax({ url: "/api/WiFiList",
+                context: document.body,
+                success: function(response){
+                    //Store a parsed version of the returned jsonfile textfile in the global variable jsonresp for global availability
+                    jsonresp = jQuery.parseJSON(response);
+                    var tekst="";
+                    //Loop over the objects of jsonresp and check the values of every object if needed
+                    for (var teller =0; teller < jsonresp.length; teller++)
+                    {
+                        var netwerkauth = jsonresp[teller].Authentication;
+                        //If the SSID attribute of the current object is empty don't use it in the network list.
+                        if(jsonresp[teller].SSID == "")
+                        {
+                            continue;
+                        }
+                        //If the authentication method = 802.1x disable the option ==> not supported
+                        if(netwerkauth == "802.1x")
+                        {
+                            tekst += "<option value='" + teller + "'disabled>" + jsonresp[teller].SSID + "</option>";
+                        }
+                        //if the authentication method is supported ==> add an active option to the list
+                        else
+                        {
+                            tekst += "<option value='" + teller + "'>" + jsonresp[teller].SSID + "</option>";
+                        }
+                        //console.log(tekst);
+                    }
+                    //Always add the other option to allow the user to manually put in the information
+                    tekst += "<option value='other'>other...</option>";
+                    //Put the list as html in the division with id netsel
+                    $("#netsel").html(tekst);
+                    getval();
+                }});
+        });
+        //this function changes the necessary values if a network is selected ==> the values that may not be changed are changed to readonly.
+        function getval()
         {
-            xhr = new XMLHttpRequest();
-            if (xhr == null)
+            //Get the value of the selected option
+            var index = $("#netsel").val();
+            //console.log(index);
+            var waardes ="";
+            //If the user wants to put in the information manually ==> give standard auth list option and every field becomes accesible
+            if(index == "other")
             {
-                alert ('Er is een probleem opgetreden met het XMLHttpRequest object');
-                return;
+                waardes += "<option value='WPA'>WPA</option>";
+                waardes += "<option value='WPA2'>WPA2</option>";
+                waardes += "<option value='None'>None</option>";
+                $('#SSID').attr('readonly', false);
+                //The field with id SSID needs to be empty so the user can enter a own SSID
+                $("#SSID").val("");
+                $('#Wifipass').attr('readonly', false);
+                $('#authsel').attr('readonly', false);
             }
-            var url= "/api/WiFiList";
-            xhr.onreadystatechange=function()
+            else
             {
-                var output = document.getElementById("netsel");
-                if (xhr.readyState == 4 && xhr.status == 200)
+                var autmeth = jsonresp[index].Authentication;
+                var netwerkprotec = jsonresp[index].Protected;
+                if(netwerkprotec == "off")
                 {
-                     var jsonresp = JSON.parse(xhr.responseText);
-                     var tekst="";
-                     for (var teller =0; teller < jsonresp.length; teller++)
-                     {
-                         tekst += "<option value=" + teller + ">" + jsonresp[teller].SSID + "</option>";
-                         console.log(tekst);
-                     }
-                     output.innerHTML = tekst;
+                    waardes += "<option value='Open'>Open</option>";
+                    $('#Wifipass').attr('readonly', true);
+                    $('#authsel').attr('readonly', true);
                 }
-                else console.log("status not ok");
+                else
+                {
+                    waardes += "<option value='"+autmeth+"'>"+autmeth+"</option>";
+                    $('#Wifipass').attr('readonly', false);
+                    $('#authsel').attr('readonly', true);
+                }
+                var netssid = jsonresp[index].SSID;
+                //console.log(autmeth);
+                $("#SSID").val(netssid);
+                $('#SSID').attr('readonly', true);
             }
-            xhr.open("GET",url,true);
-            //xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-            xhr.send();
-        }
+            $("#authsel").html(waardes);
+        };
         //-->
     </script>
 </head>
-<body onload="start()">
+<body>
 <div class="fixwidth container">
     <h1>Login information</h1>
     <form class="form-horizontal">
         <div class="form-group">
             <label for="netsel" class="col-sm-2 control-label">Select network</label>
             <div class="col-sm-10">
-                <select class="form-control" id="netsel">
+                <select class="form-control" id="netsel" onchange="getval();">
                     <option>Nothing available...</option>
                 </select>
             </div>
@@ -68,16 +111,14 @@
         <div class="form-group">
             <label for="SSID" class="col-sm-2 control-label">Wifi SSID</label>
             <div class="col-sm-10">
-                <input type="text" class="form-control" id="SSID" placeholder="SSID">
+                <input type="text" id="SSID" class="form-control" placeholder="SSID">
             </div>
         </div>
         <div class="form-group">
             <label for="authsel" class="col-sm-2 control-label">authentication method</label>
             <div class="col-sm-10">
                 <select class="form-control" id="authsel">
-                    <option>WPA</option>
-                    <option>WPA2</option>
-                    <option>None</option>
+                    <option>Nothing available...</option>
                 </select>
             </div>
         </div>
@@ -89,11 +130,10 @@
         </div>
         <div class="form-group">
             <div class="col-sm-offset-2 col-sm-10">
-                <button type="submit" class="btn btn-default">save</button>
+                <button type="submit" class="btn btn-default">Connect</button>
             </div>
         </div>
     </form>
 </div>
-
 </body>
 </html>
