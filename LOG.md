@@ -16,4 +16,5 @@ Datum				| Entry
 11/04/2016  | Alternatieve display zoeken, refreshtoken google calendar, website template maken
 14/04/2016  | Display drivers installeren en testen
 18/04/2016  | Display installeren op raspberry pi zero en permanente configuratie
-21/04/2016  | saving/reading of calendar data and tokens in json files + display framebuffer use testing
+21/04/2016  | Saving/reading of calendar data and tokens in json files + display framebuffer use testing
+25/04/2016  | Text to display testing,drawing final print
