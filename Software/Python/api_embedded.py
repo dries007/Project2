@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 import requests
 import json
 import threading
@@ -48,10 +49,12 @@ def checkauth(devcode, clientID, interv):
         resp.encoding = "application/x-www-form-urlencoded"
         data = json.loads(resp.text)
         if ( "error" in data):
+            print("waiting for authentication")
             print(resp.text)
             time.sleep(interv)
         else:
-            savevalues(data)
+            saveapiinfo(data)
+            getcalevents()
             test = 0
 
 # using the refresh token to get a new valid access token
@@ -64,25 +67,25 @@ def refreshtoke():
     params = {'client_id': clientId, 'client_secret': clientsecret, 'refresh_token': refreshtoken, 'grant_type': grant_type}
     resp = requests.post(url, data=params)
     next_auth = json.loads(resp.text)
-    fh = open("API_tokens.txt", "r")
-	tekst = fh.read()
-	fh.close()
+    print("reading current authentication information")
+    fh = open("API_tokens", "r")
+    tekst = fh.read()
+    fh.close()
     current_auth = json.loads(tekst)
+    print("change the access_token with the new token from refresh")
     current_auth["access_token"] = next_auth["access_token"]
-	###########
-	fh = open("API_tokens.txt", "w")
-	json.dump(current_auth, fh, indent=4)
-	fh.close()
-	###############
-    print("testing")
-    print(resp.text)
+    ###########
+    saveapiinfo(current_auth)
+    #print(resp.text)
 
-# juiste data opvragen en filteren uit de response
-def savevalues(data):
-    acc_tok = data["access_token"]
+def saveapiinfo(data):
     fh = open("API_tokens", "w")
     json.dump(data, fh, indent=2)
     fh.close()
+
+# juiste data opvragen en filteren uit de response
+def getcalevents():
+    acc_tok = getjsonaccess("access_token")
     tijd = datetime.now()
     tijd = tijd.isoformat("T") + "Z"
     print(tijd)
