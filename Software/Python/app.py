@@ -6,6 +6,7 @@ import socket
 import time
 import json
 import random
+import datetime
 import re
 import subprocess
 
@@ -64,13 +65,17 @@ def attempt_connect(height=0):
     # Just to be sure
     subprocess.call("killall hostapd".split(" "))
     subprocess.call("create_ap --stop wlan0".split(" "))
-    height = draw_text('Connecting to %s' % settings.wifiProfile, height=height)
-    subprocess.call(["netctl", "stop-all"])
-    if subprocess.call(["netctl", "start", settings.wifiProfile]) == 0:
+    height = draw_text('Connecting to %s' % settings["wifiProfile"], height=height)
+    if subprocess.call(["netctl", "switch-to", settings["wifiProfile"]]) == 0:
         status["network"] = True
+#        time.sleep(5)
+        height = draw_text(socket.gethostbyname(socket.gethostname()), height=height)
         height = draw_text('Syncing date & time', height=height)
+        subprocess.call("systemctl restart ntpd".split(" "))
         if subprocess.call("ntp-wait -n 5".split(" ")) != 0:
             error("NTP sync failed.")
+        subprocess.call("hwclock -w".split(" "))
+        height = draw_text(datetime.datetime.now(), height=height)
     else:
         height = draw_text('Failed...', height=height)
     return height
@@ -99,9 +104,29 @@ def root():
     return "qsdsqd"
 
 
-@app.route("/WiFiList", methods=['GET', 'POST'])
-def wifi_list():
-    if request.method == 'GET':
+@app.route("/api/wifi", methods=['GET', 'POST'])
+def api_wifi():
+    if request.method == 'POST':
+        text = "Description='Automatically generated profile by python'\n"
+        text += "Interface=wlan0\n"
+        text += "Connection=wireless\n"
+        text += "IP=dhcp\n"
+        text += "ESSID='%s'\n" % request.form['ssid']
+
+        if "pass" in request.form:
+            text += "Security=wpa\nKey='%s'" % request.form["pass"]
+        else:
+            text += "Security=none"
+
+        settings["wifiProfile"] = "GEN-wlan0-%s" % request.form["ssid"]
+        f = open("/etc/netctl/%s" % settings["wifiProfile"], "w")
+        f.write(text)
+        f.close()
+        attempt_connect()
+        if status["network"]:
+            return "YES"
+        return "NO"
+    else:
         re_cell = re.compile(r'Cell \d+')
         re_mac = re.compile(r'Address: (?P<Address>.*)')
         re_ssid = re.compile(r'ESSID:"(?P<SSID>.*)"')
@@ -128,28 +153,6 @@ def wifi_list():
                 if matcher:
                     cell.update(matcher.groupdict())
         return Response(json.dumps(data), mimetype='text/javascript')
-    elif request.method == 'POST':
-        settings.wifiProfile = "wlan0-%s" % request.form["ssid"]
-
-        text = "Description='Automatically generated profile by python'\n"
-        text += "Interface=wlan0\n"
-        text += "Connection=wireless\n"
-        text += "IP=dhcp\n"
-        text += "IP='%s'\n" % request.form['ssid']
-        if "password" in request.form:
-            text += "Security=wpa\n"
-            text += "Key='%s'\n" % request.form["password"]
-        else:
-            text += "Security=none\n"
-
-        print(text)
-
-        f = open("/etc/netctl/" + settings.wifiProfile, "w")
-        f.write(text)
-        f.close()
-
-        # attempt_connect()
-        return 'OK?'
 
 
 @app.route("/debug/settings")
