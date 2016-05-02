@@ -3,8 +3,8 @@
 import re
 import subprocess
 
-def scanWifi(interface="wlan0"):
 
+def scanWifi(interface="wlan0"):
     re_cell = re.compile(r'Cell \d+')
     re_mac = re.compile(r'Address: (?P<Address>.*)')
     re_ssid = re.compile(r'ESSID:"(?P<SSID>.*)"')
@@ -17,18 +17,18 @@ def scanWifi(interface="wlan0"):
     proc = subprocess.Popen(["iwlist", interface, "scan"], stdout=subprocess.PIPE, universal_newlines=True)
     out, err = proc.communicate()
 
-    map = []
+    data = []
     cell = None
     for line in out.split("\n"):
         line = line.strip()
         matcher = re_cell.search(line)
         if matcher:
             if cell:
-                map.append(cell)
+                data.append(cell)
             cell = {}
         for regex in [re_mac, re_ssid, re_quality, re_signal, re_encrypted, re_encryption, re_authentication]:
             matcher = regex.search(line)
             if matcher:
                 cell.update(matcher.groupdict())
 
-    return map
+    return data
