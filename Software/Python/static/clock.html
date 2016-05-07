@@ -1,0 +1,203 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/custom.css">
+    <script src="js/jquery.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <title>Wifi Login</title>
+    <script type="text/javascript">//<!--
+    "use strict";
+    var json_data = [];
+    // onload
+    $(function()
+    {
+        // GET /api/wifi -> Json data
+        $.getJSON("/api/settings", function (data)
+        {
+            json_data = data;
+            var html = "";
+            console.log(data);
+        });
+    });
+    //this function changes the necessary values if a network is selected ==> the values that may not be changed are changed to readonly.
+    function onChangeSSID()
+    {
+        const CLOCKFORM = $("#clockformat");
+        const CLOCKSIZE = $("#clocksize");
+        const DATEFORM = $("#dateformat");
+        const DATESIZE = $("#datesize");
+        const WAKEOFFSET = $("#wakeoffset");
+        const MINLIMENAB = $("#minlimenab");
+        const MINLIMIT = $("#minlimit");
+        const MAXLIMENAB = $("#maxlimenab");
+        const MAXLIMIT = $("#maxlimit");
+        const WAKEUPON = $("#wakeupon");
+        const SHOWDAYENAB = $("#showdayenab");
+        const WEEKDAYSIZE = $("#weekdaysize");
+        const ALARMTYPE = $("#alarmtype");
+
+
+        // index of selected option, or -1
+        var i = NETSEL.val();
+
+        if (i != -1)
+        {
+            if(json_data[i].Protected == "off") // Open WiFi
+            {
+                AUTHSEL.html("<option value='Open'>Open</option>");
+                WIFIPASS.attr('readonly', true);
+                AUTHSEL.attr('readonly', true);
+            }
+            else // WPA / WPA2
+            {
+                var autmeth = json_data[i].Authentication;
+                AUTHSEL.html("<option value='"+autmeth+"'>"+autmeth+"</option>");
+                WIFIPASS.attr('readonly', false);
+                AUTHSEL.attr('readonly', true);
+            }
+            SSID.val(json_data[i].SSID).attr('readonly', true);
+        }
+        else // Manual
+        {
+            AUTHSEL.html(
+                    "<option value='WPA'>WPA</option>" +
+                    "<option value='WPA2'>WPA2</option>" +
+                    "<option value='PSA'>PSA</option>" +
+                    "<option value='None'>None</option>"
+            ).attr('readonly', false).val("");
+            SSID.attr('readonly', false).val("");
+            WIFIPASS.attr('readonly', false).val("");
+        }
+    }
+    //-->
+    </script>
+</head>
+<body>
+<div class="fixwidth container">
+    <h1>Settings smartclock</h1>
+    <form class="form-horizontal">
+        <div class="form-group">
+            <label for="clockformat" class="col-sm-3 control-label">Select clock format</label>
+            <div class="col-sm-9">
+                <select class="form-control" id="clockformat">
+                    <option value="%I:%M:%S">05:20:30   (12h clock)</option>
+                    <option value="%I:%M">05:20  (12h clock)</option>
+                    <option value="%I:%M:%S %p">05:20:30 PM   (12h clock)</option>
+                    <option value="%I:%M %p">05:20  PM (12h clock)</option>
+                    <option value="%H:%M:%S">17:20:30   (24h clock)</option>
+                    <option value="%H:%M">17:20  (24h clock)</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="clocksize" class="col-sm-3 control-label">Select clock fontsize</label>
+            <div class="col-sm-9">
+                <div class="input-group">
+                    <input id="clocksize" class="form-control" type="number" name="clocksize" min="10" max="60" value="30">
+                    <span class="input-group-addon">10 &rightarrow; 60</span>
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="dateformat" class="col-sm-3 control-label">Select date format</label>
+            <div class="col-sm-9">
+                <select class="form-control" id="dateformat">
+                    <option value="%d/%m/%y">15/05/97</option>
+                    <option value="%m/%d/%y">05/15/97</option>
+                    <option value="%d-%m-%y">15-05-97</option>
+                    <option value="%m-%d-%y">05-15-97</option>
+                    <option value="%d/%m/%Y">15/05/1997</option>
+                    <option value="%m/%d/%Y">05/15/1997</option>
+                    <option value="%d-%m-%Y">15-05-1997</option>
+                    <option value="%m-%d-%Y">05-15-1997</option>
+                    <option value="%d %b %Y">15 may 1997</option>
+                    <option value="%b %d %Y">may 15 1997</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="datesize" class="col-sm-3 control-label">Select date fontsize</label>
+            <div class="col-sm-9">
+                <div class="input-group">
+                    <input id="datesize" class="form-control" type="number" name="datesize" min="10" max="60" value="30">
+                    <span class="input-group-addon">10 &rightarrow; 60</span>
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="wakeoffset" class="col-sm-3 control-label">Wake up time before first appointment</label>
+            <div class="col-sm-9">
+                <div class="input-group">
+                    <input id="wakeoffset" class="form-control" type="number" name="wakeoffset" min="0" max="240" value="60">
+                    <span class="input-group-addon">10 &rightarrow; 240 min.</span>
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="minlimit" class="col-sm-3 control-label">Earliest wake up time</label>
+            <div class="col-sm-9">
+                <div class="input-group">
+                    <div class="input-group-btn">
+                        <button id="minlimenab" type="button" class="btn btn-block btn-success">Enabled</button>
+                    </div>
+                    <input id="minlimit" class="form-control" name="minlimit" type="time" value= 06:00>
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="maxlimit" class="col-sm-3 control-label">latest wake up time</label>
+            <div class="col-sm-9">
+                <div class="input-group">
+                    <div class="input-group-btn">
+                        <button id="maxlimenab" type="button" class="btn btn-block btn-success">Enabled</button>
+                    </div>
+                    <input id="maxlimit" class="form-control" name="maxlimit" type="time" value= 12:00>
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="wakeupon" class="col-sm-3 control-label">wake up on</label>
+            <div class="col-sm-9">
+                <div class="input-group" id ="wakeupon">
+                    <input type="radio" name="wakeupon" value="Weekdays"> Weekdays
+                    <input type="radio" name="wakeupon" value="Weekends"> Weekends
+                    <input type="radio" name="wakeupon" value="Both" checked> Both
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="showday" class="col-sm-3 control-label">show day of the week</label>
+            <div class="col-sm-9">
+                <div class="col-sm-3 input-group" id="showday">
+                    <div class="input-group-btn">
+                        <button id="showdayenab" type="button" class="btn btn-block btn-success">Enabled</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="weekdaysize" class="col-sm-3 control-label">Select fontsize for day of the week</label>
+            <div class="col-sm-9">
+                <div class="input-group">
+                    <input id="weekdaysize" class="form-control" type="number" name="weekdaysize" min="10" max="60" value="20">
+                    <span class="input-group-addon">10 &rightarrow; 60</span>
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="Alarmtype" class="col-sm-3 control-label">Alarm type</label>
+            <div class="col-sm-9">
+                <select class="form-control" id="alarmtype">
+                    <option value="music" selected>Music file</option>
+                    <option value="stream">Stream</option>
+                    <option value="predef">Build in soundeffects</option>
+                </select>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-block btn-success">save settings</button>
+    </form>
+</div>
+</body>
+</html>
