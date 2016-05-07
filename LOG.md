@@ -19,3 +19,4 @@ Datum				| Entry
 21/04/2016  | Saving/reading of calendar data and tokens in json files + display framebuffer use testing
 25/04/2016  | Text to display testing,drawing final print
 02/05/2016  | Continuing writing text to screen and combining previous parts of python
+07/05/2016  | Webinterface settings, wifi, creating,reading and writing of settingsfiles,...
