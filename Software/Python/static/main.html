@@ -1,0 +1,116 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="webinterface.css">
+    <script src="js/jquery.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <title>Wifi Login</title>
+    <script type="text/javascript">//<!--
+        "use strict";
+        var json_data = [];
+        // onload
+        $(function()
+        {
+            const NETSEL = $("#netsel");
+            // GET /api/wifi -> Json data
+            $.getJSON("/api/wifi", function (data)
+            {
+                json_data = data;
+                var html = "";
+                for (var i = 0; i < data.length; i++)
+                {
+                    if (data[i].SSID === "") continue;
+                    html += "<option value='" + i + "'" + (data[i].Authentication === "802.1x" ? " disabled " : "") + ">" + data[i].SSID + "</option>";
+                }
+                html += "<option value='-1'>other...</option>";
+                NETSEL.html(html);
+                onChangeSSID();
+            });
+            NETSEL.change(onChangeSSID)
+        });
+        //this function changes the necessary values if a network is selected ==> the values that may not be changed are changed to readonly.
+        function onChangeSSID()
+        {
+            const NETSEL = $("#netsel");
+            const SSID = $("#SSID");
+            const WIFIPASS = $("#Wifipass");
+            const AUTHSEL = $("#authsel");
+
+            // index of selected option, or -1
+            var i = NETSEL.val();
+
+            if (i != -1)
+            {
+                if(json_data[i].Protected == "off") // Open WiFi
+                {
+                    AUTHSEL.html("<option value='Open'>Open</option>");
+                    WIFIPASS.attr('readonly', true);
+                    AUTHSEL.attr('readonly', true);
+                }
+                else // WPA / WPA2
+                {
+                    var autmeth = json_data[i].Authentication;
+                    AUTHSEL.html("<option value='"+autmeth+"'>"+autmeth+"</option>");
+                    WIFIPASS.attr('readonly', false);
+                    AUTHSEL.attr('readonly', true);
+                }
+                SSID.val(json_data[i].SSID).attr('readonly', true);
+            }
+            else // Manual
+            {
+                AUTHSEL.html(
+                        "<option value='WPA'>WPA</option>" +
+                        "<option value='WPA2'>WPA2</option>" +
+                        "<option value='PSA'>PSA</option>" +
+                        "<option value='None'>None</option>"
+                ).attr('readonly', false).val("");
+                SSID.attr('readonly', false).val("");
+                WIFIPASS.attr('readonly', false).val("");
+            }
+        }
+        //-->
+    </script>
+</head>
+<body>
+<div class="fixwidth container">
+    <h1>Login information</h1>
+    <form class="form-horizontal">
+        <div class="form-group">
+            <label for="netsel" class="col-sm-2 control-label">Select network</label>
+            <div class="col-sm-10">
+                <select class="form-control" id="netsel" onchange="onChangeSSID();">
+                    <option>Nothing available...</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="SSID" class="col-sm-2 control-label">Wifi SSID</label>
+            <div class="col-sm-10">
+                <input type="text" id="SSID" class="form-control" placeholder="SSID">
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="authsel" class="col-sm-2 control-label">authentication method</label>
+            <div class="col-sm-10">
+                <select class="form-control" id="authsel">
+                    <option>Nothing available...</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="Wifipass" class="col-sm-2 control-label">Wifi Password</label>
+            <div class="col-sm-10">
+                <input type="password" class="form-control" id="Wifipass" placeholder="Wifi Password">
+            </div>
+        </div>
+        <div class="form-group">
+            <div class="col-sm-offset-2 col-sm-10">
+                <button type="submit" class="btn btn-default">Connect</button>
+            </div>
+        </div>
+    </form>
+</div>
+</body>
+</html>
