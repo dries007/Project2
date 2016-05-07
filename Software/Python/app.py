@@ -1,6 +1,5 @@
 #!/bin/env python
 import os
-import sys
 # noinspection PyUnresolvedReferences
 import pygame
 import socket
@@ -10,8 +9,6 @@ import random
 import datetime
 import re
 import subprocess
-import sched
-import threading
 
 from flask import Flask
 from flask import json
@@ -25,18 +22,13 @@ BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
 
-threadLocal = threading.local()
-
-CLOCK = sched.scheduler(time.time, time.sleep)
-
 pygame.display.init()
 pygame.font.init()
 pygame.mouse.set_visible(False)
 
-FONT_XL = pygame.font.SysFont("notomono", 60)
-FONT_L = pygame.font.SysFont("notomono", 36)
-FONT_M = pygame.font.SysFont("notomono", 26)
-FONT_S = pygame.font.SysFont("notomono", 15)
+FONT_100 = pygame.font.Font(None, 100)
+FONT_50 = pygame.font.Font(None, 50)
+FONT_25 = pygame.font.Font(None, 25)
 
 SIZE = (pygame.display.Info().current_w, pygame.display.Info().current_h)
 SCREEN = pygame.display.set_mode(SIZE, pygame.FULLSCREEN)
@@ -45,46 +37,26 @@ SCREEN.fill(BLACK)
 subprocess.call("killall hostapd".split(" "))
 subprocess.call("create_ap --stop wlan0".split(" "))
 
-settings = {
-    "clock": {
-        "format": "%H:%M:%S",
-        "size": 60,
-    },
-    "date": {
-        "format": "%Y-%m-%d",
-        "size": 36
-    }
-}
+settings = {}
 status = {
-    "network": False,
-    "clock": False
+    "network": False
 }
 if os.path.isfile("settings.json"):
     settings = json.load(open("settings.json"))
 
-FONT_CLOCK = pygame.font.SysFont("notomono", settings["clock"]["size"])
-FONT_DATE = pygame.font.SysFont("notomono", settings["date"]["size"])
 
-
-def save():
-    json.dump(settings, open('settings.json', 'w'))
-
-
-def draw_text(message, font=FONT_S, color=WHITE, height=0, center=True):
+def draw_text(message, font=FONT_25, color=WHITE, height=0):
     if height == 0:
         SCREEN.fill(BLACK)
-    text = font.render(message, False, color)
-    x = 0
-    if center:
-        x = (SCREEN.get_width() - text.get_width()) / 2
-    SCREEN.blit(text, (x, height))
+    tmp = font.render(message, False, color)
+    SCREEN.blit(tmp, (0, height))
     pygame.display.update()
-    return height + text.get_height()
+    return height + tmp.get_height()
 
 
 def error(message):
     SCREEN.fill(BLACK)
-    height = draw_text('SmartClock (%s)' % VERSION, FONT_M)
+    height = draw_text('SmartClock (%s)' % VERSION, FONT_50)
     height = draw_text('Fatal Error', color=RED, height=height)
     draw_text(message, height=height)
 
@@ -96,19 +68,19 @@ def attempt_connect(height=0):
     height = draw_text('Connecting to %s' % settings["wifiProfile"], height=height)
     if subprocess.call(["netctl", "switch-to", settings["wifiProfile"]]) == 0:
         status["network"] = True
-        height = draw_text(socket.gethostbyname(socket.gethostname()), height=height, font=FONT_M)
-        height = draw_text('Syncing time & date', height=height)
+#        time.sleep(5)
+        height = draw_text(socket.gethostbyname(socket.gethostname()), height=height)
+        height = draw_text('Syncing date & time', height=height)
         subprocess.call("systemctl restart ntpd".split(" "))
         if subprocess.call("ntp-wait -n 5".split(" ")) != 0:
             error("NTP sync failed.")
-        else:
-            subprocess.call("hwclock -w".split(" "))
-            status["clock"] = True
+        subprocess.call("hwclock -w".split(" "))
+        height = draw_text(datetime.datetime.now(), height=height)
     else:
         height = draw_text('Failed...', height=height)
     return height
 
-h = draw_text('SmartClock (%s)' % VERSION, font=FONT_M)
+h = draw_text('SmartClock (%s)' % VERSION, font=FONT_50)
 
 if not os.path.exists("/sys/class/net/wlan0"):
     error("No wifi interface")
@@ -122,9 +94,9 @@ if not status["network"]:
     subprocess.call("create_ap -n --daemon --redirect-to-localhost wlan0 SmartAlarmClock".split(" "))
     time.sleep(5)
     h = draw_text('Connect to wifi network for setup:', height=h)
-    h = draw_text('SmartAlarmClock', height=h, font=FONT_M)
+    h = draw_text('SmartAlarmClock', height=h, font=FONT_50)
     h = draw_text('And browse to:', height=h)
-    h = draw_text(socket.gethostbyname(socket.gethostname()), height=h, font=FONT_M)
+    h = draw_text(socket.gethostbyname(socket.gethostname()), height=h, font=FONT_50)
 
 
 @app.route("/")
@@ -135,25 +107,25 @@ def root():
 @app.route("/api/wifi", methods=['GET', 'POST'])
 def api_wifi():
     if request.method == 'POST':
-        status["clock"] = False
         text = "Description='Automatically generated profile by python'\n"
         text += "Interface=wlan0\n"
         text += "Connection=wireless\n"
         text += "IP=dhcp\n"
         text += "ESSID='%s'\n" % request.form['ssid']
+
         if "pass" in request.form:
             text += "Security=wpa\nKey='%s'" % request.form["pass"]
         else:
             text += "Security=none"
+
         settings["wifiProfile"] = "GEN-wlan0-%s" % request.form["ssid"]
         f = open("/etc/netctl/%s" % settings["wifiProfile"], "w")
         f.write(text)
         f.close()
-        save()
         attempt_connect()
         if status["network"]:
-            return "OK"
-        return "ERROR"
+            return "YES"
+        return "NO"
     else:
         re_cell = re.compile(r'Cell \d+')
         re_mac = re.compile(r'Address: (?P<Address>.*)')
@@ -183,36 +155,14 @@ def api_wifi():
         return Response(json.dumps(data), mimetype='text/javascript')
 
 
-@app.route("/api/settings")
+@app.route("/debug/settings")
 def debug_settings():
     return json.dumps(settings)
 
 
-@app.route("/api/status")
+@app.route("/debug/status")
 def debug_status():
     return json.dumps(status)
 
+app.run(host="0.0.0.0", port=5000)  # todo: disable debug!
 
-def update_ip():
-    threadLocal.ip = socket.gethostbyname(socket.gethostname())
-    CLOCK.enter(10, 2, update_ip)
-
-
-def draw_clock():
-    if status["clock"]:
-        height = draw_text(datetime.datetime.now().strftime(settings["clock"]["format"]), font=FONT_CLOCK)
-        draw_text(datetime.datetime.now().strftime(settings["date"]["format"]), height=height, font=FONT_DATE)
-        draw_text(threadLocal.ip, height=height + 60, font=FONT_S)
-
-    CLOCK.enter(1, 1, draw_clock)
-
-
-def run_clock_thread():
-    threadLocal.ip = socket.gethostbyname(socket.gethostname())
-    CLOCK.run()
-
-CLOCK.enter(1, 1, draw_clock)
-CLOCK.enter(10, 2, update_ip)
-threading.Thread(target=run_clock_thread, name="ClockThread", daemon=True).start()
-
-app.run(host="0.0.0.0", port=5000, debug=True, use_debugger=True, use_reloader=False)  # todo: disable debug!
