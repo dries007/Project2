@@ -37,7 +37,7 @@
 			</div>
 		</div>
 		<div class="col-md-4">
-			<img class="gridimage" src="Rotaryencoders.jpg" alt="Rotary encoders with push function">
+			<img class="gridimage" src="ClockOn.jpg" alt="Rotary encoders with push function">
 			<div class="caption">
 				<p class="contrasttext"> Image caption </p>
 			</div>
@@ -45,13 +45,13 @@
 	  </div>
 	  <div class="row">
 		<div class="col-md-4">   
-			<img class="gridimage" src="pizerokit.jpg" alt="Raspberry Pi zero starter kit">
+			<img class="gridimage" src="display_whole.jpg" alt="Raspberry Pi zero starter kit">
 			<div class="caption">
 				<p class="contrasttext"> Image caption </p>
 			</div>
 		</div>
 		<div class="col-md-4">
-			<img class="gridimage" src="WiFidongle.jpg" alt="WiFi dongle used">
+			<img class="gridimage" src="RTC.jpg" alt="WiFi dongle used">
 			<div class="caption">
 				<p class="contrasttext"> Image caption </p>
 			</div>
