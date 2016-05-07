@@ -1,0 +1,144 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/custom.css">
+    <script src="js/jquery.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <title>Wifi Login</title>
+    <script type="text/javascript">//<!--
+        "use strict";
+        var json_data = [];
+        // onload
+        $(function()
+        {
+            const MODAL_SCANNING = $('#modal-scan').modal({backdrop: "static", keyboard: false, show: true});
+            const MODAL_CONNECTING = $('#modal-connect').modal({backdrop: "static", keyboard: false, show: true});
+            const NETSEL = $("#netsel");
+            const FORM = $("#form");
+            const SSID = $("#ssid");
+            const PASS = $("#pass");
+
+            function onChangeSSID()
+            {
+                SSID.parents(".form-group").removeClass("has-error");
+                NETSEL.parents(".form-group").removeClass("has-error");
+                // index of selected option, or -1
+                var i = NETSEL.val();
+                if (i != -1) // One of the items on the list
+                {
+                    PASS.val("").attr('readonly', json_data[i].Protected == "off");
+                    SSID.val(json_data[i].SSID).attr('readonly', true);
+                }
+                else // Manual
+                {
+                    SSID.attr('readonly', false).val("");
+                    PASS.attr('readonly', false).val("");
+                }
+            }
+
+            function reload()
+            {
+                MODAL_SCANNING.modal('show');
+                // GET /api/wifi -> Json data
+                $.getJSON("/api/wifi", function (data)
+                {
+                    json_data = data;
+                    var html = "<option value='-1' disabled selected>Pick an option...</option>";
+                    for (var i = 0; i < data.length; i++)
+                    {
+                        if (data[i].SSID === "") continue;
+                        html += "<option value='" + i + "'" + (data[i].Authentication === "802.1x" ? " disabled " : "") + ">" + data[i].SSID + "</option>";
+                    }
+                    html += "<option value='-1'>Other...</option>";
+                    NETSEL.html(html);
+                    MODAL_SCANNING.modal('hide');
+                });
+            }
+
+            SSID.focusin(function ()
+            {
+                SSID.parents(".form-group").removeClass("has-error");
+            });
+
+            $("#reload").click(reload);
+            NETSEL.change(onChangeSSID);
+            FORM.submit(function ()
+            {
+                console.log("SSID");
+                console.log(SSID.val());
+                console.log("PASS");
+                console.log(PASS.val());
+                if (SSID.val() == "")
+                {
+                    if (NETSEL.val() == -1) SSID.parents(".form-group").addClass("has-error");
+                    else NETSEL.parents(".form-group").addClass("has-error");
+                    return false;
+                }
+
+                $.post("/api/wifi", {ssid: SSID.val(), pass: PASS.val()});
+
+
+
+                return false;
+            });
+
+            reload();
+        });
+        //-->
+    </script>
+</head>
+<body>
+<div class="container">
+    <h1>WiFi information</h1>
+    <form class="form-horizontal" id="form">
+        <div class="form-group">
+            <label for="netsel" class="col-sm-3 control-label">Select network</label>
+            <div class="col-sm-9">
+                <div class="input-group">
+                    <select class="form-control" id="netsel">
+                        <option value="-1" disabled>Still loading...</option>
+                    </select>
+                    <span class="input-group-btn">
+                        <button id="reload" type="button" class="btn btn-default">Scan again</button>
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="ssid" class="col-sm-3 control-label">Wifi SSID</label>
+            <div class="col-sm-9">
+                <input type="text" id="ssid" class="form-control" placeholder="SSID" readonly>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="pass" class="col-sm-3 control-label">Wifi Password</label>
+            <div class="col-sm-9">
+                <input type="password" class="form-control" id="pass" placeholder="Wifi Password, Leave blank for open network." readonly>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-block btn-success">Connect</button>
+    </form>
+</div>
+
+<div class="modal fade bs-example-modal-sm" tabindex="-1" role="dialog" id="modal-scan">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header"><h4 class="modal-title">Please wait</h4></div>
+            <div class="modal-body">Scanning for WiFi networks...</div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade bs-example-modal-sm" tabindex="-1" role="dialog" id="modal-connect">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header"><h4 class="modal-title">Please wait</h4></div>
+            <div class="modal-body">Scanning for WiFi networks...</div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

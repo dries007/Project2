@@ -12,6 +12,7 @@ import time
 import json
 import random
 import re
+import urllib
 import subprocess
 import sched
 import threading
@@ -20,6 +21,7 @@ from flask import Flask
 from flask import json
 from flask import Response
 from flask import request
+from flask import url_for
 
 print("Initializing... (%s)" % (datetime.datetime.now() - START_TIME))
 
@@ -138,11 +140,19 @@ if not status["network"]:
 
 
 @app.route("/")
-def root():
-    return "qsdsqd"
+def api():
+    output = []
+    for rule in app.url_map.iter_rules():
+
+        options = {}
+        for arg in rule.arguments:
+            options[arg] = "[%s]" % arg
+
+        output.append({'name': rule.endpoint, 'methods': ','.join(rule.methods), 'url': urllib.parse.unquote(url_for(rule.endpoint, **options))})
+    return Response(json.dumps(output), mimetype='text/javascript')
 
 
-@app.route("/api/wifi", methods=['GET', 'POST'])
+@app.route("/wifi", methods=['GET', 'POST'])
 def api_wifi():
     if request.method == 'POST':
         status["clock"] = False
@@ -151,7 +161,7 @@ def api_wifi():
         text += "Connection=wireless\n"
         text += "IP=dhcp\n"
         text += "ESSID='%s'\n" % request.form['ssid']
-        if "pass" in request.form:
+        if "pass" in request.form and request.form["pass"] != "":
             text += "Security=wpa\nKey='%s'" % request.form["pass"]
         else:
             text += "Security=none"
@@ -193,14 +203,14 @@ def api_wifi():
         return Response(json.dumps(data), mimetype='text/javascript')
 
 
-@app.route("/api/settings")
-def debug_settings():
-    return json.dumps(settings)
+@app.route("/settings")
+def api_settings():
+    return Response(json.dumps(settings), mimetype='text/javascript')
 
 
-@app.route("/api/status")
-def debug_status():
-    return json.dumps(status)
+@app.route("/status")
+def api_status():
+    return Response(json.dumps(status), mimetype='text/javascript')
 
 
 def update_ip():
