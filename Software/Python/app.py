@@ -1,4 +1,8 @@
 #!/bin/env python
+import datetime
+START_TIME = datetime.datetime.now()
+print("Loading libraries... (%s)" % (datetime.datetime.now() - START_TIME))
+
 import os
 import sys
 # noinspection PyUnresolvedReferences
@@ -7,7 +11,6 @@ import socket
 import time
 import json
 import random
-import datetime
 import re
 import subprocess
 import sched
@@ -17,6 +20,8 @@ from flask import Flask
 from flask import json
 from flask import Response
 from flask import request
+
+print("Initializing... (%s)" % (datetime.datetime.now() - START_TIME))
 
 app = Flask(__name__)
 VERSION = "0.1"
@@ -46,9 +51,13 @@ subprocess.call("killall hostapd".split(" "))
 subprocess.call("create_ap --stop wlan0".split(" "))
 
 settings = {
+    "day": {
+        "format": "%A",
+        "size": 40
+    },
     "clock": {
         "format": "%H:%M:%S",
-        "size": 60,
+        "size": 60
     },
     "date": {
         "format": "%Y-%m-%d",
@@ -62,6 +71,7 @@ status = {
 if os.path.isfile("settings.json"):
     settings = json.load(open("settings.json"))
 
+FONT_DAY = pygame.font.SysFont("notomono", settings["day"]["size"])
 FONT_CLOCK = pygame.font.SysFont("notomono", settings["clock"]["size"])
 FONT_DATE = pygame.font.SysFont("notomono", settings["date"]["size"])
 
@@ -200,7 +210,8 @@ def update_ip():
 
 def draw_clock():
     if status["clock"]:
-        height = draw_text(datetime.datetime.now().strftime(settings["clock"]["format"]), font=FONT_CLOCK)
+        height = draw_text(datetime.datetime.now().strftime(settings["day"]["format"]), font=FONT_DAY)
+        height = draw_text(datetime.datetime.now().strftime(settings["clock"]["format"]), height=height, font=FONT_CLOCK)
         draw_text(datetime.datetime.now().strftime(settings["date"]["format"]), height=height, font=FONT_DATE)
         draw_text(threadLocal.ip, height=height + 60, font=FONT_S)
 
@@ -215,4 +226,5 @@ CLOCK.enter(1, 1, draw_clock)
 CLOCK.enter(10, 2, update_ip)
 threading.Thread(target=run_clock_thread, name="ClockThread", daemon=True).start()
 
+print("Starting webserver... (%s)" % (datetime.datetime.now() - START_TIME))
 app.run(host="0.0.0.0", port=5000, debug=True, use_debugger=True, use_reloader=False)  # todo: disable debug!
