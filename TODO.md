@@ -7,6 +7,7 @@ ToDo
 - [x] Setup wifi raspberry pi
 - [x] Software LCD
 - [ ] Software Sound
+	- [ ] I2S gebruiken
 - [ ] Software time/calendar
   - [ ] Use of auth checken
   - [ ] API/ --> bekijken
