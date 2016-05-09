@@ -5,38 +5,75 @@
     <link rel="stylesheet" href="css/bootstrap.min.css">
     <link rel="stylesheet" href="css/custom.css">
     <script src="js/jquery.js"></script>
-    <script src="js/bootstrap.min.js"></script>
+    <script src="js/bootstrap.js"></script>
+    <script src="js/custom.js"></script>
     <title>SmartClock</title>
-    <script type="text/javascript">//<!--
-        "use strict";
-        // onload
-        function loadStatus()
-        {
-            // GET /api/status -> Json data
-            $.getJSON("/api/status", function (data)
-            {
-                if (data.network !== true) window.location = "wifi.html";
-                else window.location = "clock.html";
-            }).error(function ()
-            {
-                setTimeout(loadStatus, 1000);
-            });
-        }
-        $(loadStatus);
-        //-->
-    </script>
 </head>
 <body>
 <div class="container">
     <h1>SmartClock</h1>
-    <div class="centered-pills">
-        <ul class="nav nav-pills">
-            <li role="presentation"><a href="wifi.html">WiFi Settings</a></li>
-            <li role="presentation"><a href="clock.html">Clock & Alarm Settings</a></li>
+    <div>
+        <!-- Nav tabs -->
+        <ul class="nav nav-tabs" role="tablist">
+            <li role="presentation" class="active"><a href="#status" role="tab" data-toggle="tab">Status</a></li>
+            <li role="presentation"><a href="#wifi" role="tab" data-toggle="tab">WiFi Settings</a></li>
+            <li role="presentation"><a href="#clock" role="tab" data-toggle="tab">Clock Settings</a></li>
+            <li role="presentation"><a href="#gcal" role="tab" data-toggle="tab">Google Calender</a></li>
         </ul>
+        <!-- Tab panes -->
+        <div class="tab-content">
+            <div role="tabpanel" class="tab-pane fade in active" id="status">
+                <p class="lead">Debug data</p>
+                <pre id="debug">No data yet...</pre>
+            </div>
+            <div role="tabpanel" class="tab-pane fade" id="wifi">
+                <form class="form-horizontal" id="form">
+                    <div class="form-group">
+                        <label for="netsel" class="col-sm-3 control-label">Select network</label>
+                        <div class="col-sm-9">
+                            <div class="input-group">
+                                <select class="form-control" id="netsel">
+                                    <option value="-1" disabled>Still loading...</option>
+                                </select>
+                                <span class="input-group-btn">
+                                    <button id="reload" type="button" class="btn btn-default">Scan again</button>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="ssid" class="col-sm-3 control-label">Wifi SSID</label>
+                        <div class="col-sm-9">
+                            <input type="text" id="ssid" class="form-control" placeholder="SSID" readonly>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="pass" class="col-sm-3 control-label">Wifi Password</label>
+                        <div class="col-sm-9">
+                            <input type="password" class="form-control" id="pass" placeholder="Wifi Password, Leave blank for open network." readonly>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-block btn-success">Connect</button>
+                </form>
+            </div>
+            <div role="tabpanel" class="tab-pane fade" id="clock">
+                <p>Clock settings</p>
+            </div>
+            <div role="tabpanel" class="tab-pane fade" id="gcal">
+                <p>Google cal settings</p>
+            </div>
+        </div>
     </div>
-    <p class="lead">Still booting...</p>
-    <p>You will be forwarded to the right settings page once everything is ready.</p>
 </div>
+
+<div class="modal fade" tabindex="-1" role="dialog" id="modal">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header"><h4 class="modal-title">Please wait</h4></div>
+            <div class="modal-body">The program is still booting...</div>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>

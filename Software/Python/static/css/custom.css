@@ -7,6 +7,10 @@ h1
     text-align: center;
 }
 
+.tab-pane
+{
+    padding-top: 1em;
+}
 
 .centered-pills { text-align:center; }
 .centered-pills ul.nav-pills { display:inline-block; }
