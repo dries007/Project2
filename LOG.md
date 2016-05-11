@@ -20,3 +20,5 @@ Datum				| Entry
 25/04/2016  | Text to display testing,drawing final print
 02/05/2016  | Continuing writing text to screen and combining previous parts of python
 07/05/2016  | Webinterface settings, wifi, creating,reading and writing of settingsfiles,...
+09/05/2016  | Rotary encoder en verbinden python met webinterface
+11/05/2016  | Display achtergrond verlichting PWM en verslag
