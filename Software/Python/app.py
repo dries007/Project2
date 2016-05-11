@@ -1,5 +1,6 @@
 #!/bin/env python
 import datetime
+
 START_TIME = datetime.datetime.now()
 print("Loading libraries... (%s)" % (datetime.datetime.now() - START_TIME))
 
@@ -16,6 +17,7 @@ import urllib
 import subprocess
 import sched
 import threading
+import RPi.GPIO as GPIO
 
 from flask import Flask
 from flask import json
@@ -52,6 +54,27 @@ SCREEN.fill(BLACK)
 subprocess.call("killall hostapd".split(" "))
 subprocess.call("create_ap --stop wlan0".split(" "))
 
+RE_A = 16
+RE_B = 5
+RE_S = 6
+
+GPIO.setmode(GPIO.BCM)
+GPIO.setup([RE_A, RE_B, RE_S], GPIO.IN, pull_up_down=GPIO.PUD_UP)
+subprocess.call("gpio -g mode 12 pwm".split(" "))
+subprocess.call("gpio -g pwm 12 1023".split(" "))
+
+
+def btn():
+    print("Button press")
+
+
+def rot(chan):
+    print("Rotation press %d" % chan)
+
+GPIO.add_event_detect(RE_A, GPIO.RISING, callback=rot)
+GPIO.add_event_detect(RE_B, GPIO.RISING, callback=rot)
+GPIO.add_event_detect(RE_S, GPIO.RISING, callback=btn, bouncetime=200)
+
 settings = {
     "day": {
         "format": "%A",
@@ -68,7 +91,15 @@ settings = {
 }
 status = {
     "network": False,
-    "clock": False
+    "clock": False,
+    "brightness": {
+        "pulsing": True,
+        "now": 1023,
+        "target": 1023,
+        "step": 10,
+        "min": 150,
+        "max": 1023
+    }
 }
 if os.path.isfile("settings.json"):
     settings = json.load(open("settings.json"))
@@ -80,6 +111,21 @@ FONT_DATE = pygame.font.SysFont("notomono", settings["date"]["size"])
 
 def save():
     json.dump(settings, open('settings.json', 'w'))
+
+
+def set_brightness(target=1023, slow=True, pulse=False, step=10, set_min=None, set_max=None):
+    if set_min:
+        status['brightness']['min'] = set_min
+    if set_max:
+        status['brightness']['max'] = set_max
+    if target > status['brightness']['max']:
+        target = status['brightness']['max']
+    if target < status['brightness']['min']:
+        target = status['brightness']['min']
+    status['brightness']['target'] = target
+    status['brightness']['slow'] = slow
+    status['brightness']['pulse'] = pulse
+    status['brightness']['step'] = step
 
 
 def draw_text(message, font=FONT_S, color=WHITE, height=0, center=True):
@@ -120,6 +166,7 @@ def attempt_connect(height=0):
         height = draw_text('Failed...', height=height)
     return height
 
+
 h = draw_text('SmartClock (%s)' % VERSION, font=FONT_M)
 
 if not os.path.exists("/sys/class/net/wlan0"):
@@ -148,7 +195,8 @@ def api():
         for arg in rule.arguments:
             options[arg] = "[%s]" % arg
 
-        output.append({'name': rule.endpoint, 'methods': ','.join(rule.methods), 'url': urllib.parse.unquote(url_for(rule.endpoint, **options))})
+        output.append({'name': rule.endpoint, 'methods': ','.join(rule.methods),
+                       'url': urllib.parse.unquote(url_for(rule.endpoint, **options))})
     return Response(json.dumps(output), mimetype='text/javascript')
 
 
@@ -215,14 +263,33 @@ def api_status():
 
 def update_ip():
     threadLocal.ip = socket.gethostbyname(socket.gethostname())
-    CLOCK.enter(10, 2, update_ip)
+    CLOCK.enter(10, 3, update_ip)
+
+
+def update_pwm():
+    bgt = status['brightness']
+    if bgt['target'] != bgt['now']:
+        if bgt['target'] < bgt['now']:
+            bgt['now'] = max(bgt['target'], bgt['now'] - bgt['step'], bgt['min'])
+        else:
+            bgt['now'] = min(bgt['target'], bgt['now'] + bgt['step'], bgt['max'])
+        # print("Set PWM (%d)" % (brightness['now']))
+        subprocess.call(["gpio", "-g", "pwm", "12", str(bgt['now'])])
+    elif bgt['pulsing']:
+        if bgt['target'] <= bgt['min']:
+            bgt['target'] = bgt['max']
+        else:
+            bgt['target'] = bgt['min']
+    CLOCK.enter(0.1, 2, update_pwm)
 
 
 def draw_clock():
     if status["clock"]:
         height = draw_text(datetime.datetime.now().strftime(settings["day"]["format"]), font=FONT_DAY)
-        height = draw_text(datetime.datetime.now().strftime(settings["clock"]["format"]), height=height, font=FONT_CLOCK)
+        height = draw_text(datetime.datetime.now().strftime(settings["clock"]["format"]), height=height,
+                           font=FONT_CLOCK)
         draw_text(datetime.datetime.now().strftime(settings["date"]["format"]), height=height, font=FONT_DATE)
+        draw_text(threadLocal.ip, height=height + 60, font=FONT_S)
         draw_text(threadLocal.ip, height=height + 60, font=FONT_S)
 
     CLOCK.enter(1, 1, draw_clock)
@@ -230,11 +297,15 @@ def draw_clock():
 
 def run_clock_thread():
     threadLocal.ip = socket.gethostbyname(socket.gethostname())
+    update_ip()
+    update_pwm()
+    draw_clock()
     CLOCK.run()
 
-CLOCK.enter(1, 1, draw_clock)
-CLOCK.enter(10, 2, update_ip)
+
 threading.Thread(target=run_clock_thread, name="ClockThread", daemon=True).start()
 
 print("Starting webserver... (%s)" % (datetime.datetime.now() - START_TIME))
 app.run(host="0.0.0.0", port=5000, debug=True, use_debugger=True, use_reloader=False)  # todo: disable debug!
+
+GPIO.cleanup()

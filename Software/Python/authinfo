@@ -1,6 +1,0 @@
-{
-  "client_id": "806788990556-i96frm71oem88mn63qvsudbmvhrusesf.apps.googleusercontent.com",
-  "url": "https://accounts.google.com/o/oauth2/device/code",
-  "scope": "https://www.googleapis.com/auth/calendar.readonly",
-  "client_secret": "MFDHJWCHUl_CHAwokNvPXyR4"
-}
