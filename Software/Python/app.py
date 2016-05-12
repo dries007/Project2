@@ -2,10 +2,9 @@
 import datetime
 
 START_TIME = datetime.datetime.now()
-print("Loading libraries... (%s)" % (datetime.datetime.now() - START_TIME))
+print("Starting... (%s)" % START_TIME)
 
 import os
-import sys
 # noinspection PyUnresolvedReferences
 import pygame
 import socket
@@ -25,9 +24,12 @@ from flask import Response
 from flask import request
 from flask import url_for
 
-print("Initializing... (%s)" % (datetime.datetime.now() - START_TIME))
+os.putenv('SDL_FBDEV', '/dev/fb1')
+
+print("Loading libraries... (%s)" % (datetime.datetime.now() - START_TIME))
 
 app = Flask(__name__)
+
 VERSION = "0.1"
 
 BLACK = (0, 0, 0)
@@ -64,16 +66,21 @@ subprocess.call("gpio -g mode 12 pwm".split(" "))
 subprocess.call("gpio -g pwm 12 1023".split(" "))
 
 
-def btn():
+def btn(chan):
     print("Button press")
 
 
 def rot(chan):
-    print("Rotation press %d" % chan)
+    a = GPIO.input(RE_A)
+    b = GPIO.input(RE_B)
+    if (a ^ b) == 1:
+        if a:
+            print("A")
+        else:
+            print("B")
 
-GPIO.add_event_detect(RE_A, GPIO.RISING, callback=rot)
-GPIO.add_event_detect(RE_B, GPIO.RISING, callback=rot)
-GPIO.add_event_detect(RE_S, GPIO.RISING, callback=btn, bouncetime=200)
+GPIO.add_event_detect(RE_B, GPIO.BOTH, callback=rot, bouncetime=5)
+GPIO.add_event_detect(RE_S, GPIO.FALLING, callback=btn, bouncetime=20)
 
 settings = {
     "day": {
