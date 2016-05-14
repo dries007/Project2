@@ -22,3 +22,4 @@ Datum				| Entry
 07/05/2016  | Webinterface settings, wifi, creating,reading and writing of settingsfiles,...
 09/05/2016  | Rotary encoder en verbinden python met webinterface
 11/05/2016  | Display achtergrond verlichting PWM en verslag
+12/05/2016  | Vervolg maken verslag en samenvoegen softwaredelen

@@ -1,10 +1,12 @@
 #!/bin/env python
 import datetime
+import os
 
 START_TIME = datetime.datetime.now()
 print("Starting... (%s)" % START_TIME)
+os.putenv('SDL_FBDEV', '/dev/fb1')
+# os.putenv('SDL_VIDEODRIVER', 'fbcon')
 
-import os
 # noinspection PyUnresolvedReferences
 import pygame
 import socket
@@ -16,6 +18,7 @@ import urllib
 import subprocess
 import sched
 import threading
+# noinspection PyUnresolvedReferences
 import RPi.GPIO as GPIO
 
 from flask import Flask
@@ -23,8 +26,6 @@ from flask import json
 from flask import Response
 from flask import request
 from flask import url_for
-
-os.putenv('SDL_FBDEV', '/dev/fb1')
 
 print("Loading libraries... (%s)" % (datetime.datetime.now() - START_TIME))
 
@@ -79,8 +80,9 @@ def rot(chan):
         else:
             print("B")
 
-GPIO.add_event_detect(RE_B, GPIO.BOTH, callback=rot, bouncetime=5)
-GPIO.add_event_detect(RE_S, GPIO.FALLING, callback=btn, bouncetime=20)
+GPIO.add_event_detect(RE_A, GPIO.BOTH, callback=rot, bouncetime=50)
+GPIO.add_event_detect(RE_B, GPIO.BOTH, callback=rot, bouncetime=50)
+GPIO.add_event_detect(RE_S, GPIO.FALLING, callback=btn, bouncetime=200)
 
 settings = {
     "day": {
