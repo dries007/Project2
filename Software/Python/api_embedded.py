@@ -8,6 +8,7 @@ from datetime import datetime
 
 
 def getverinfo():
+    print("Getting necessary ID's")
     url = getjsonvalue('url')
     clientID = getjsonvalue("client_id")
     scope = getjsonvalue("scope")
@@ -17,8 +18,9 @@ def getverinfo():
     devicecode = data['device_code']
     interval = data['interval']
     t1 = threading.Thread(target=checkauth, args=(devicecode, clientID, interval))
-    t1.daemon = True
+    #t1.daemon = True
     t1.start()
+    print(r.text)
     return r.text
 
 def getjsonvalue(property_id):
@@ -39,6 +41,7 @@ def savecal(data):
 #Opvragen van een code om authenticatie te bevestigen
 # Refreshtoken moet nog worden opgeslagen in langdurige opslag --> zo lang mogelijk gebruiken
 def checkauth(devcode, clientID, interv):
+    print("Waiting for authenticaion by user")
     test = 1
     while (test):
         url = "https://www.googleapis.com/oauth2/v4/token"
@@ -49,8 +52,6 @@ def checkauth(devcode, clientID, interv):
         resp.encoding = "application/x-www-form-urlencoded"
         data = json.loads(resp.text)
         if ( "error" in data):
-            print("waiting for authentication")
-            print(resp.text)
             time.sleep(interv)
         else:
             saveapiinfo(data)
@@ -86,15 +87,17 @@ def saveapiinfo(data):
 # juiste data opvragen en filteren uit de response
 def getcalevents():
     acc_tok = getjsonaccess("access_token")
+    acctype = getjsonaccess("token_type")
     tijd = datetime.now()
-    tijd = tijd.isoformat("T") + "Z"
-    print(tijd)
-    url = "https://www.googleapis.com/calendar/v3/calendars/primary/events?access_token=" + acc_tok+"&timeMin="+tijd
-    testing = requests.get(url)
+    tijd = tijd.isoformat("T")+"z"
+    print("Alle evenementen na: "+tijd+" worden opgehaald")
+    url = "https://www.googleapis.com/calendar/v3/calendars/primary/events"
+    param = {'timeMin': tijd}
+    header = {"Authorization": acctype+ " " + acc_tok}
+    testing = requests.get(url, headers=header, params=param)
     data = json.loads(testing.text)
     savecal(data)
     printcalevents()
-    #refreshtoke("806788990556-i96frm71oem88mn63qvsudbmvhrusesf.apps.googleusercontent.com", "MFDHJWCHUl_CHAwokNvPXyR4", refresh)
 
 def printcalevents():
     inputdata = open('calendardata').read()
@@ -102,3 +105,5 @@ def printcalevents():
     for item in values['items']:
         print(item['start']['dateTime'])
         print(item['summary'])
+        
+getverinfo()
