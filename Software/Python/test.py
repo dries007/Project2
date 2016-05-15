@@ -1,24 +1,32 @@
 #!/bin/env python
-import datetime
+
+import os
 import time
 # noinspection PyUnresolvedReferences
-import RPi.GPIO as GPIO
+import pygame
 
-RE_A = 16
-RE_B = 5
-RE_S = 6
+os.putenv('SDL_FBDEV', '/dev/fb1')
 
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
 
-def rot(chan):
-    a = GPIO.input(RE_A)
-    if a:
-        return
-    b = GPIO.input(RE_B)
-    print("A: %s B: %s" % (a, b))
+print("Mark")
+pygame.display.init()
+pygame.font.init()
+pygame.mouse.set_visible(False)
 
-GPIO.setmode(GPIO.BCM)
-GPIO.setup([RE_A, RE_B, RE_S], GPIO.IN, pull_up_down=GPIO.PUD_UP)
+FONT_XL = pygame.font.SysFont('notomono', 50)
 
-GPIO.add_event_detect(RE_A, GPIO.FALLING, callback=rot, bouncetime=25)
+SIZE = (pygame.display.Info().current_w, pygame.display.Info().current_h)
+SCREEN = pygame.display.set_mode(SIZE, pygame.FULLSCREEN)
+SCREEN.fill(BLACK)
 
-input("Press enter for exit\n")
+text = FONT_XL.render("Booting...", False, WHITE)
+x = (SCREEN.get_width() - text.get_width()) / 2
+y = SCREEN.get_height()/ 2 - text.get_height()
+
+SCREEN.blit(text, (x, y))
+pygame.display.update()
+
+time.sleep(300)
+
