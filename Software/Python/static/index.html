@@ -21,6 +21,11 @@
         {
             padding-top: 1em;
         }
+
+        a.disabled
+        {
+
+        }
     </style>
     <script src="js/jquery.js" type="application/javascript"></script>
     <script src="js/bootstrap.js" type="application/javascript"></script>
@@ -31,33 +36,152 @@
         {
             const MODAL = $('#modal');
             const DEBUG = $('#debug');
+            const NETSEL = $('#netsel');
+            const WIFI_FORM = $('#wifi-form');
+            const WIFI_RELOAD = $('#wifi-reload');
+            const SSID = $('#ssid');
+            const PASS = $('#pass');
             const TAB_STATUS = $('a[data-toggle="tab"][href="#status"]');
             const TAB_WIFI = $('a[data-toggle="tab"][href="#wifi"]');
             const TAB_CLOCK = $('a[data-toggle="tab"][href="#clock"]');
             const TAB_GCAL = $('a[data-toggle="tab"][href="#gcal"]');
+            var status_running = false;
+            var status_data = null;
+            var wifi_data = null;
+
+            function disableTabs() {
+                [TAB_STATUS, TAB_WIFI, TAB_CLOCK, TAB_GCAL].forEach(function (e) {
+                    e.prop('disabled', true).addClass('disabled')
+                });
+            }
+
+            function enableTabs() {
+                [TAB_STATUS, TAB_WIFI, TAB_CLOCK, TAB_GCAL].forEach(function (e) {
+                    e.prop('disabled', false).removeClass('disabled')
+                });
+            }
+
+            function showModal(message, title)
+            {
+                disableTabs();
+                MODAL.find('.modal-body').text(message);
+                MODAL.find('.modal-title').text(title);
+                MODAL.modal({backdrop: 'static', keyboard: false, show: true});
+            }
 
             function loadStatus()
             {
-                function showModal()
+                var showTimeout = setTimeout(function() {
+                    showModal('The program is still booting...', 'Please wait');
+                }, 250);
+                $.getJSON('/api/status', function (data)
                 {
-                    MODAL.modal({backdrop: "static", keyboard: false, show: true});
-                }
-                var showTimeout = setTimeout(showModal, 250);
-                $.getJSON("/api/status", function (data)
-                {
+                    console.log('Update status data.');
+                    status_data = data;
                     DEBUG.text(JSON.stringify(data, null, 4));
-                    if (data['booting']) return ;
+                    if (data['booting']) return;
+                    status_running = false;
                     MODAL.modal('hide');
+                    enableTabs();
                     clearTimeout(showTimeout);
                     if (!data['network']) TAB_WIFI.tab('show');
                     else if (data['gcal']['user_code']) TAB_GCAL.tab('show');
                 }).error(function ()
                 {
+                    if (status_running) return;
+                    status_running = true;
                     setTimeout(loadStatus, 500);
                 });
             }
-
             loadStatus();
+
+            function onChangeSSID()
+            {
+                SSID.parents('.form-group').removeClass('has-error');
+                NETSEL.parents('.form-group').removeClass('has-error');
+                // index of selected option, or -1
+                var i = NETSEL.val();
+                if (i != -1) // One of the items on the list
+                {
+                    PASS.val('').attr('readonly', wifi_data[i].Protected == 'off');
+                    SSID.val(wifi_data[i].SSID).attr('readonly', true);
+                }
+                else // Manual
+                {
+                    SSID.attr('readonly', false).val('');
+                    PASS.attr('readonly', false).val('');
+                }
+            }
+            NETSEL.change(onChangeSSID);
+            SSID.focusin(function ()
+            {
+                SSID.parents('.form-group').removeClass('has-error');
+            });
+            WIFI_FORM.submit(function ()
+            {
+                if (SSID.val() == '')
+                {
+                    if (NETSEL.val() == -1) SSID.parents('.form-group').addClass('has-error');
+                    else NETSEL.parents('.form-group').addClass('has-error');
+                    return false;
+                }
+
+                disableTabs();
+                showModal('Connecting to the wifi network...<br>Make sure you connect to the same wifi as the SmartAlarmClock.', 'Connecting to wifi');
+                $.post('/api/wifi', {ssid: SSID.val(), pass: PASS.val()}, function ()
+                {
+                    MODAL.modal('hide');
+                    enableTabs();
+                });
+
+                return false;
+            });
+
+            function loadWifi()
+            {
+                WIFI_RELOAD.prop('disabled', true);
+                disableTabs();
+                NETSEL.html('<option value="-1" disabled>Scanning...</option>');
+                $.getJSON('/api/wifi', function (data)
+                {
+                    wifi_data = data;
+                    var html = "<option value='-1' disabled selected>Pick an option...</option>";
+                    for (var i = 0; i < data.length; i++)
+                    {
+                        if (data[i].SSID === "") continue;
+                        html += "<option value='" + i + "'" + (data[i].Authentication === '802.1x' ? ' disabled ' : '') + ">" + data[i].SSID + "</option>";
+                    }
+                    html += "<option value='-1'>Other...</option>";
+                    NETSEL.html(html);
+                    WIFI_RELOAD.prop('disabled', false);
+                    enableTabs();
+                });
+            }
+            WIFI_RELOAD.click(function () {
+                loadWifi();
+            });
+
+            TAB_STATUS.on('show.bs.tab', function ()
+            {
+                console.log('Tab status');
+                loadStatus();
+            });
+            TAB_WIFI.on('show.bs.tab', function ()
+            {
+                console.log('Tab wifi');
+                loadStatus();
+                loadWifi();
+            });
+            TAB_CLOCK.on('show.bs.tab', function ()
+            {
+                console.log('Tab clock');
+                loadStatus();
+            });
+            TAB_GCAL.on('show.bs.tab', function ()
+            {
+                console.log('Tab gcal');
+                loadStatus();
+            });
         });
     </script>
     <title>SmartClock</title>
@@ -80,16 +204,16 @@
                 <pre id="debug">No data yet...</pre>
             </div>
             <div role="tabpanel" class="tab-pane fade" id="wifi">
-                <form class="form-horizontal" id="form">
+                <form class="form-horizontal" id="wifi-form">
                     <div class="form-group">
                         <label for="netsel" class="col-sm-3 control-label">Select network</label>
                         <div class="col-sm-9">
                             <div class="input-group">
                                 <select class="form-control" id="netsel">
-                                    <option value="-1" disabled>Still loading...</option>
+                                    <option value="-1" disabled>Scanning...</option>
                                 </select>
                                 <span class="input-group-btn">
-                                    <button id="reload" type="button" class="btn btn-default">Scan again</button>
+                                    <button id="wifi-reload" type="button" class="btn btn-default" disabled>Scan again</button>
                                 </span>
                             </div>
                         </div>
@@ -122,8 +246,8 @@
 <div class="modal fade" tabindex="-1" role="dialog" id="modal">
     <div class="modal-dialog modal-sm">
         <div class="modal-content">
-            <div class="modal-header"><h4 class="modal-title">Please wait</h4></div>
-            <div class="modal-body">The program is still booting...</div>
+            <div class="modal-header"><h4 class="modal-title">Placeholder</h4></div>
+            <div class="modal-body">Placeholder</div>
         </div>
     </div>
 </div>
