@@ -29,9 +29,12 @@
         /** on load */
         $(function ()
         {
-            const MODAL = $("#modal");
-            const DEBUG = $("#debug");
-            const TAB_WIFI = $("#wifi");
+            const MODAL = $('#modal');
+            const DEBUG = $('#debug');
+            const TAB_STATUS = $('a[data-toggle="tab"][href="#status"]');
+            const TAB_WIFI = $('a[data-toggle="tab"][href="#wifi"]');
+            const TAB_CLOCK = $('a[data-toggle="tab"][href="#clock"]');
+            const TAB_GCAL = $('a[data-toggle="tab"][href="#gcal"]');
 
             function loadStatus()
             {
@@ -43,9 +46,11 @@
                 $.getJSON("/api/status", function (data)
                 {
                     DEBUG.text(JSON.stringify(data, null, 4));
+                    if (data['booting']) return ;
                     MODAL.modal('hide');
                     clearTimeout(showTimeout);
-                    if (!data.network) TAB_WIFI.tab('show');
+                    if (!data['network']) TAB_WIFI.tab('show');
+                    else if (data['gcal']['user_code']) TAB_GCAL.tab('show');
                 }).error(function ()
                 {
                     setTimeout(loadStatus, 500);

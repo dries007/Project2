@@ -7,6 +7,7 @@ import os
 import subprocess
 import threading
 import time
+import json
 
 # ############################## Definitions
 VERSION = '0.1'
@@ -21,7 +22,10 @@ status = {
     },
     'menu': None,
     'clock': False,
-    'pulsing': False
+    'pulsing': False,
+    'gcal': {
+
+    }
 }
 settings = {
     'day': {
@@ -37,38 +41,50 @@ settings = {
         'size': 36
     },
     'sound': {
-        'volume': .50
+        'volume': 50
     },
     'brightness': {
-        'preference': 0.5,
-        'now': 1,
-        'target': 1,
-        'step': 0.01,
-        'min': 0.15,
-        'max': 1
+        'preference': 50,
+        'now': 100,
+        'target': 100,
+        'step': 1,
+        'min': 15,
+        'max': 100
     }
+}
+gcal = {
+    'client_id': os.getenv('APP_GCAL_ID'),
+    'client_secret': os.getenv('APP_GCAL_SECRET'),
+    'scope': 'https://www.googleapis.com/auth/calendar.readonly'
 }
 
 
+class EnumEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Enum):
+            return str(obj)
+        return json.JSONEncoder.default(self, obj)
+
+
 def save():  # save settings
-    json.dump(settings, open(SETTINGS_FILE, 'w'))
+    json.dump(settings, open(SETTINGS_FILE, 'w'), indent=2)
 
 
-def clamp(n, minn=0, maxn=1):
+def clamp(n, minn=0, maxn=100):
     return max(min(maxn, n), minn)
 
 
-def set_brightness(percent=1):
-    subprocess.call(['gpio', '-g', 'pwm', '12', '%.0f' % (clamp(percent) * 1023)])
+def set_brightness(percent=100):
+    subprocess.call(['gpio', '-g', 'pwm', '12', '%.0f' % (clamp(percent) * 10.23)])
 
 
 def pre_boot_pwm():
     i = 0
-    while status['booting'] and i < 1:
+    while status['booting'] and i < 100:
         set_brightness(i)
         time.sleep(0.2)
-        i += 0.1
-    set_brightness(1)
+        i += 1
+    set_brightness(100)
 
 # ############################## Sequential code
 subprocess.call(['gpio', '-g', 'mode', '12', 'pwm'])  # set pwm pin
@@ -93,13 +109,14 @@ threading.Thread(target=pre_boot_pwm, name='PreBootPWM', daemon=True).start()
 print('Boot sequence part 2 - Pygame (%s)' % datetime.datetime.now())
 # ############################## Imports
 # noinspection PyUnresolvedReferences
+import requests
 import pygame
 import socket
-import json
 import re
 import urllib
 import sched
 import sys
+import dateutil.parser
 import signal
 
 from enum import Enum
@@ -184,20 +201,20 @@ def error(message):
 
 def task_update_ip():
     threadLocal.ip = socket.gethostbyname(socket.gethostname())
-    CLOCK.enter(10, 3, task_update_ip)
+    CLOCK.enter(10, 10, task_update_ip)
 
 
 def task_update_pwm():
     bgt = settings['brightness']
     if status['draw']['option'] == Menu.Set_Brightness:
-        subprocess.call(['gpio', '-g', 'pwm', '12', '%.0f' % (bgt['preference'] * 1023)])
+        set_brightness(bgt['preference'])
     else:
         if bgt['target'] != bgt['now']:
             if bgt['target'] < bgt['now']:
                 bgt['now'] = max(bgt['target'], bgt['now'] - bgt['step'], bgt['min'], 0)
             else:
                 bgt['now'] = min(bgt['target'], bgt['now'] + bgt['step'], bgt['max'], 1)
-            subprocess.call(['gpio', '-g', 'pwm', '12', '%.0f' % (bgt['now'] * 1023)])
+            set_brightness(bgt['now'])
         else:
             if status['pulsing']:
                 if bgt['target'] <= bgt['min']:
@@ -213,21 +230,32 @@ def task_draw_clock():
     height = 0
     if status['draw']['clock']:
         height = draw_text(datetime.datetime.now().strftime(settings['day']['format']), height=height, font=FONT_DAY)
+        height -= (FONT_CLOCK.get_height() * 0.1)
         height = draw_text(datetime.datetime.now().strftime(settings['clock']['format']), height=height, font=FONT_CLOCK)
+        height -= (FONT_CLOCK.get_height() * 0.1)
         height = draw_text(datetime.datetime.now().strftime(settings['date']['format']), height=height, font=FONT_DATE)
+    if 'user_code' in status['gcal']:
+        height = draw_text(status['gcal']['verification_url'], height=height, font=FONT_S)
+        height = draw_text("Code: " + status['gcal']['user_code'], height=height, font=FONT_S)
     if status['menu']:
         height = draw_text("Menu", height=height, font=FONT_S)
         height = draw_text(status['menu'].value['name'], height=height, font=FONT_S)
-    if status['draw']['option'] == Menu.Show_IP:
-        height = draw_text(threadLocal.ip, height=height, font=FONT_S)
-    elif status['draw']['option'] == Menu.Set_Volume:
-        height = draw_text('Volume: %.0f%%' % (100 * settings['sound']['volume']), height=height, font=FONT_S)
-        pygame.draw.rect(SCREEN, WHITE, (0, height, SIZE[0] * settings['sound']['volume'], 5))
-        height += 5
-    elif status['draw']['option'] == Menu.Set_Brightness:
-        height = draw_text('Brightness preference: %.0f%%' % (100 * settings['brightness']['preference']), height=height, font=FONT_S)
-        pygame.draw.rect(SCREEN, WHITE, (0, height, SIZE[0] * settings['brightness']['preference'], 5))
-        height += 5
+    elif status['draw']['option']:
+        if status['draw']['option'] == Menu.Show_IP:
+            height = draw_text(threadLocal.ip, height=height, font=FONT_S)
+        elif status['draw']['option'].value['setting']:
+            setting = status['draw']['option'].value['setting']
+            current = settings
+            for key in setting:
+                current = current[key]
+            height = draw_text(status['draw']['option'].value['name'] + ': %d%%' % current, height=height, font=FONT_S)
+            pygame.draw.rect(SCREEN, WHITE, (0, height, SIZE[0] * (current / 100), 5))
+            height += 5
+    elif 'items' in status and status['items'] and len(status['items']) > 0:
+        latest = status['items'][0]
+        height = draw_text("Next appointment:", height=height, font=FONT_S)
+        height = draw_text(latest['summary'], height=height, font=FONT_S)
+        height = draw_text(dateutil.parser.parse(latest['start']['dateTime']).strftime('%a at %H:%M'), height=height, font=FONT_S)
     pygame.display.update()
     CLOCK.enter(0.1, 1, task_draw_clock)
 
@@ -258,6 +286,78 @@ def attempt_connect(height=0):
         height = draw_text('Failed...', height=height)
     return height
 
+
+def gcal_refresh():
+    out = json.loads(requests.post('https://www.googleapis.com/oauth2/v4/token', data={
+        'refresh_token': settings['gcal']['refresh_token'],
+        'client_id': gcal['client_id'],
+        'client_secret': gcal['client_secret'],
+        'grant_type': 'refresh_token'
+    }).text)
+    status['gcal'] = out
+    if 'expires_in' in out:
+        status['gcal']['expires'] = datetime.datetime.now() + datetime.timedelta(seconds=out['expires_in'] - 10)
+
+
+def gcal_poll():
+    out = json.loads(requests.post('https://www.googleapis.com/oauth2/v4/token', data={
+        'client_id': gcal['client_id'],
+        'client_secret': gcal['client_secret'],
+        'code': status['gcal']['device_code'],
+        'grant_type': 'http://oauth.net/grant_type/device/1.0'
+    }).text)
+    if "error" in out:
+        print(out['error'])
+    else:
+        status['gcal'] = out
+        status['gcal']['expires'] = datetime.datetime.now() + datetime.timedelta(seconds=out['expires_in'] - 10)
+        settings['gcal'] = {
+            'refresh_token': out['refresh_token'],
+            'calendar_id': 'primary'
+        }
+        save()
+        gcal_get_events()
+        return  # to prevent re-registering
+
+    if datetime.datetime.now() > status['gcal']['expires']:
+        print('Token request expired. (%s)' % datetime.datetime.now())
+        status['gcal'] = {}
+    else:
+        CLOCK.enter(status['gcal']['interval'], 3, gcal_poll)
+
+
+def gcal_request_token():
+    out = json.loads(requests.post('https://accounts.google.com/o/oauth2/device/code', data={
+        'client_id': gcal['client_id'],
+        'scope': gcal['scope']
+    }).text)
+    status['gcal'] = {}
+    status['gcal']['device_code'] = out['device_code']
+    status['gcal']['interval'] = out['interval']
+    status['gcal']['user_code'] = out['user_code']
+    status['gcal']['verification_url'] = out['verification_url']
+    status['gcal']['expires'] = datetime.datetime.now() + datetime.timedelta(seconds=out['expires_in'] - 10)
+    CLOCK.enter(out['interval'], 3, gcal_poll)
+
+
+def gcal_get_events():
+    if 'calendar_id' not in status['gcal'] or datetime.datetime.now() > status['gcal']['expires']:
+        gcal_refresh()
+    out = json.loads(requests.get('https://www.googleapis.com/calendar/v3/calendars/%s/events' % settings['gcal']['calendar_id'], headers={
+        'Authorization': status['gcal']['token_type'] + ' ' + status['gcal']['access_token']
+    }, params={
+        'timeMin': datetime.datetime.now().isoformat('T') + 'z',
+        'timeMax': (datetime.datetime.now() + datetime.timedelta(days=7)).isoformat('T') + 'z',
+        'singleEvents': True,
+        'orderBy': 'startTime'
+    }).text)
+    if 'items' not in out:
+        print('No items in response gcal_get_events')
+        status['items'] = None
+        return False
+    status['items'] = out['items']
+
+
 # ############################## Sequential code
 if not os.path.exists('/sys/class/net/wlan0'):
     error('No wifi interface')
@@ -271,7 +371,12 @@ h = draw_text('SmartClock (%s)' % VERSION, font=FONT_M)
 if 'wifiProfile' in settings and settings['wifiProfile'] != '':
     h = attempt_connect(h)
 
-if not status['network']:
+if status['network']:
+    if 'gcal' in settings:
+        gcal_get_events()
+    else:
+        gcal_request_token()
+else:
     subprocess.call(['hwclock', '-s'])
     h = draw_text('Starting AP', height=h)
     subprocess.call(['create_ap', '-n', '--daemon', '--redirect-to-localhost', 'wlan0', 'SmartAlarmClock'])
@@ -299,6 +404,7 @@ def int_btn_ok(chan):
         status['menu'] = None
     elif status['draw']['option']:
         status['draw']['option'] = None
+        save()
     else:
         status['menu'] = Menu.Show_IP
 
@@ -319,8 +425,7 @@ def int_rot(chan):
             current = settings
             for key in setting[:-1]:
                 current = current[key]
-            current[setting[-1]] = clamp(current[setting[-1]] + (0.01 if b else -0.01))
-            save()
+            current[setting[-1]] = clamp(current[setting[-1]] + (1 if b else -1))
 
 # ############################## Sequential code
 GPIO.setmode(GPIO.BCM)
@@ -348,7 +453,7 @@ def api():
         for arg in rule.arguments:
             options[arg] = '[%s]' % arg
         output.append({'name': rule.endpoint, 'methods': ','.join(rule.methods), 'url': urllib.parse.unquote(url_for(rule.endpoint, **options))})
-    return Response(json.dumps(output), mimetype='text/javascript')
+    return Response(json.dumps(output, cls=EnumEncoder), mimetype='text/javascript')
 
 
 @app.route('/wifi', methods=['GET', 'POST'])
@@ -399,17 +504,17 @@ def api_wifi():
                 matcher = regex.search(line)
                 if matcher:
                     cell.update(matcher.groupdict())
-        return Response(json.dumps(data), mimetype='text/javascript')
+        return Response(json.dumps(data, cls=EnumEncoder), mimetype='text/javascript')
 
 
 @app.route('/settings')
 def api_settings():
-    return Response(json.dumps(settings), mimetype='text/javascript')
+    return Response(json.dumps(settings, cls=EnumEncoder), mimetype='text/javascript')
 
 
 @app.route('/status')
 def api_status():
-    return Response(json.dumps(status), mimetype='text/javascript')
+    return Response(json.dumps(status, cls=EnumEncoder), mimetype='text/javascript')
 
 # ############################## Sequential code
 print('Starting webserver... (%s)' % datetime.datetime.now())
