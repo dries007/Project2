@@ -23,7 +23,7 @@ SCREEN.fill(BLACK)
 
 text = FONT_XL.render("Booting...", False, WHITE)
 x = (SCREEN.get_width() - text.get_width()) / 2
-y = SCREEN.get_height()/ 2 - text.get_height()
+y = SCREEN.get_height() / 2 - text.get_height()
 
 SCREEN.blit(text, (x, y))
 pygame.display.update()

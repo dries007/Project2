@@ -9,6 +9,9 @@ import threading
 import time
 
 # ############################## Definitions
+VERSION = '0.1'
+SETTINGS_FILE = "/root/www/settings.json"
+
 status = {
     'booting': True,
     'network': False,
@@ -47,6 +50,10 @@ settings = {
 }
 
 
+def save():  # save settings
+    json.dump(settings, open(SETTINGS_FILE, 'w'))
+
+
 def clamp(n, minn=0, maxn=1):
     return max(min(maxn, n), minn)
 
@@ -57,11 +64,11 @@ def set_brightness(percent=1):
 
 def pre_boot_pwm():
     i = 0
-    while status['booting'] and i < 1024:
-        subprocess.call(['gpio', '-g', 'pwm', '12', str(i)])
-        time.sleep(0.1)
-        i += 1
-    subprocess.call(['gpio', '-g', 'pwm', '12', '1023'])
+    while status['booting'] and i < 1:
+        set_brightness(i)
+        time.sleep(0.2)
+        i += 0.1
+    set_brightness(1)
 
 # ############################## Sequential code
 subprocess.call(['gpio', '-g', 'mode', '12', 'pwm'])  # set pwm pin
@@ -101,10 +108,6 @@ from enum import unique
 # ############################## Definitions
 
 
-def save():  # save settings
-    json.dump(settings, open(SETTINGS_FILE, 'w'))
-
-
 def signal_handler(signal, frame):  # Required to avoid pygame.display.init hanging on a second boot
     print('EXIT: SIGTERM or SIGINT (%s)' % datetime.datetime.now())
     time.sleep(1)
@@ -123,9 +126,6 @@ class Menu(Enum):  # Main Menu enum. If setting is None, its a toggle
 # ############################## Sequential code
 signal.signal(signal.SIGTERM, signal_handler)
 signal.signal(signal.SIGINT, signal_handler)
-
-VERSION = '0.1'
-SETTINGS_FILE = "/root/www/settings.json"
 
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
@@ -233,7 +233,6 @@ def task_draw_clock():
 
 
 def run_clock_thread():
-    threadLocal.ip = socket.gethostbyname(socket.gethostname())
     task_update_ip()
     task_update_pwm()
     task_draw_clock()
@@ -414,8 +413,8 @@ def api_status():
 
 # ############################## Sequential code
 print('Starting webserver... (%s)' % datetime.datetime.now())
-app.run(host='0.0.0.0', port=5000, debug=True, use_debugger=True, use_reloader=False)  # Blocking call! todo: disable debug!
+app.run(host='127.0.0.1', port=5000, debug=True, use_debugger=True, use_reloader=False)  # Blocking call! todo: disable debug!
 
-
-print('EXIT: Flask died(%s)' % datetime.datetime.now())
+print('EXIT: Flask died (%s)' % datetime.datetime.now())
+pygame.quit()
 GPIO.cleanup()
