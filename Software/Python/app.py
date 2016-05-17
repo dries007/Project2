@@ -481,7 +481,7 @@ def api_wifi():
     else:
         re_cell = re.compile(r'Cell \d+')
         re_mac = re.compile(r'Address: (?P<Address>.*)')
-        re_ssid = re.compile(r'ESSID:"(?P<SSID>.*)"')
+        re_ssid = re.compile(r'ESSID:"(?P<WIFI_SSID>.*)"')
         re_quality = re.compile(r'Quality=(?P<Quality>\d+)/100')
         re_signal = re.compile(r'Signal level=(?P<SignalLevel>\d+)/100')
         re_encrypted = re.compile(r'Encryption key:(?P<Protected>on|off)')

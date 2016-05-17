@@ -7,11 +7,14 @@
     <meta name="description" content="SmartAlarmClock Web-interface">
     <meta name="author" content="Dries K. & Michiel B.">
     <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/font-awesome.css">
+    <!--suppress CssUnusedSymbol -->
     <style rel="stylesheet">
         .container
         {
             max-width: 730px;
         }
+
         h1
         {
             text-align: center;
@@ -24,166 +27,9 @@
 
         a.disabled
         {
-
+            cursor: not-allowed;
         }
     </style>
-    <script src="js/jquery.js" type="application/javascript"></script>
-    <script src="js/bootstrap.js" type="application/javascript"></script>
-    <script type="application/javascript">
-        "use strict";
-        /** on load */
-        $(function ()
-        {
-            const MODAL = $('#modal');
-            const DEBUG = $('#debug');
-            const NETSEL = $('#netsel');
-            const WIFI_FORM = $('#wifi-form');
-            const WIFI_RELOAD = $('#wifi-reload');
-            const SSID = $('#ssid');
-            const PASS = $('#pass');
-            const TAB_STATUS = $('a[data-toggle="tab"][href="#status"]');
-            const TAB_WIFI = $('a[data-toggle="tab"][href="#wifi"]');
-            const TAB_CLOCK = $('a[data-toggle="tab"][href="#clock"]');
-            const TAB_GCAL = $('a[data-toggle="tab"][href="#gcal"]');
-            var status_running = false;
-            var status_data = null;
-            var wifi_data = null;
-
-            function disableTabs() {
-                [TAB_STATUS, TAB_WIFI, TAB_CLOCK, TAB_GCAL].forEach(function (e) {
-                    e.prop('disabled', true).addClass('disabled')
-                });
-            }
-
-            function enableTabs() {
-                [TAB_STATUS, TAB_WIFI, TAB_CLOCK, TAB_GCAL].forEach(function (e) {
-                    e.prop('disabled', false).removeClass('disabled')
-                });
-            }
-
-            function showModal(message, title)
-            {
-                disableTabs();
-                MODAL.find('.modal-body').text(message);
-                MODAL.find('.modal-title').text(title);
-                MODAL.modal({backdrop: 'static', keyboard: false, show: true});
-            }
-
-            function loadStatus()
-            {
-                var showTimeout = setTimeout(function() {
-                    showModal('The program is still booting...', 'Please wait');
-                }, 250);
-                $.getJSON('/api/status', function (data)
-                {
-                    console.log('Update status data.');
-                    status_data = data;
-                    DEBUG.text(JSON.stringify(data, null, 4));
-                    if (data['booting']) return;
-                    status_running = false;
-                    MODAL.modal('hide');
-                    enableTabs();
-                    clearTimeout(showTimeout);
-                    if (!data['network']) TAB_WIFI.tab('show');
-                    else if (data['gcal']['user_code']) TAB_GCAL.tab('show');
-                }).error(function ()
-                {
-                    if (status_running) return;
-                    status_running = true;
-                    setTimeout(loadStatus, 500);
-                });
-            }
-            loadStatus();
-
-            function onChangeSSID()
-            {
-                SSID.parents('.form-group').removeClass('has-error');
-                NETSEL.parents('.form-group').removeClass('has-error');
-                // index of selected option, or -1
-                var i = NETSEL.val();
-                if (i != -1) // One of the items on the list
-                {
-                    PASS.val('').attr('readonly', wifi_data[i].Protected == 'off');
-                    SSID.val(wifi_data[i].SSID).attr('readonly', true);
-                }
-                else // Manual
-                {
-                    SSID.attr('readonly', false).val('');
-                    PASS.attr('readonly', false).val('');
-                }
-            }
-            NETSEL.change(onChangeSSID);
-            SSID.focusin(function ()
-            {
-                SSID.parents('.form-group').removeClass('has-error');
-            });
-            WIFI_FORM.submit(function ()
-            {
-                if (SSID.val() == '')
-                {
-                    if (NETSEL.val() == -1) SSID.parents('.form-group').addClass('has-error');
-                    else NETSEL.parents('.form-group').addClass('has-error');
-                    return false;
-                }
-
-                disableTabs();
-                showModal('Connecting to the wifi network...<br>Make sure you connect to the same wifi as the SmartAlarmClock.', 'Connecting to wifi');
-                $.post('/api/wifi', {ssid: SSID.val(), pass: PASS.val()}, function ()
-                {
-                    MODAL.modal('hide');
-                    enableTabs();
-                });
-
-                return false;
-            });
-
-            function loadWifi()
-            {
-                WIFI_RELOAD.prop('disabled', true);
-                disableTabs();
-                NETSEL.html('<option value="-1" disabled>Scanning...</option>');
-                $.getJSON('/api/wifi', function (data)
-                {
-                    wifi_data = data;
-                    var html = "<option value='-1' disabled selected>Pick an option...</option>";
-                    for (var i = 0; i < data.length; i++)
-                    {
-                        if (data[i].SSID === "") continue;
-                        html += "<option value='" + i + "'" + (data[i].Authentication === '802.1x' ? ' disabled ' : '') + ">" + data[i].SSID + "</option>";
-                    }
-                    html += "<option value='-1'>Other...</option>";
-                    NETSEL.html(html);
-                    WIFI_RELOAD.prop('disabled', false);
-                    enableTabs();
-                });
-            }
-            WIFI_RELOAD.click(function () {
-                loadWifi();
-            });
-
-            TAB_STATUS.on('show.bs.tab', function ()
-            {
-                console.log('Tab status');
-                loadStatus();
-            });
-            TAB_WIFI.on('show.bs.tab', function ()
-            {
-                console.log('Tab wifi');
-                loadStatus();
-                loadWifi();
-            });
-            TAB_CLOCK.on('show.bs.tab', function ()
-            {
-                console.log('Tab clock');
-                loadStatus();
-            });
-            TAB_GCAL.on('show.bs.tab', function ()
-            {
-                console.log('Tab gcal');
-                loadStatus();
-            });
-        });
-    </script>
     <title>SmartClock</title>
 </head>
 <body>
@@ -199,17 +45,18 @@
         </ul>
         <!-- Tab panes -->
         <div class="tab-content">
+            <!-- Status panel -->
             <div role="tabpanel" class="tab-pane fade in active" id="status">
-                <p class="lead">Debug data</p>
                 <pre id="debug">No data yet...</pre>
             </div>
+            <!-- Wifi panel -->
             <div role="tabpanel" class="tab-pane fade" id="wifi">
                 <form class="form-horizontal" id="wifi-form">
                     <div class="form-group">
-                        <label for="netsel" class="col-sm-3 control-label">Select network</label>
+                        <label for="wifi-dropdown" class="col-sm-3 control-label">Select network</label>
                         <div class="col-sm-9">
                             <div class="input-group">
-                                <select class="form-control" id="netsel">
+                                <select class="form-control" id="wifi-dropdown">
                                     <option value="-1" disabled>Scanning...</option>
                                 </select>
                                 <span class="input-group-btn">
@@ -219,25 +66,156 @@
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="ssid" class="col-sm-3 control-label">Wifi SSID</label>
+                        <label for="wifi-ssid" class="col-sm-3 control-label">Wifi SSID</label>
                         <div class="col-sm-9">
-                            <input type="text" id="ssid" class="form-control" placeholder="SSID" readonly>
+                            <input type="text" id="wifi-ssid" class="form-control" placeholder="SSID" readonly>
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="pass" class="col-sm-3 control-label">Wifi Password</label>
+                        <label for="ssid-pass" class="col-sm-3 control-label">Wifi Password</label>
                         <div class="col-sm-9">
-                            <input type="password" class="form-control" id="pass" placeholder="Wifi Password, Leave blank for open network." readonly>
+                            <input type="password" class="form-control" id="ssid-pass" placeholder="Wifi Password, Leave blank for open network." readonly>
                         </div>
                     </div>
                     <button type="submit" class="btn btn-block btn-success">Connect</button>
                 </form>
             </div>
+            <!-- Clock panel -->
             <div role="tabpanel" class="tab-pane fade" id="clock">
-                <p>Clock settings</p>
+                <form class="form-horizontal" id="clock-form">
+                    <div class="form-group">
+                        <label for="clock-weekday-enable" class="col-sm-3 control-label">Weekday</label>
+                        <div class="col-sm-9">
+                            <button id="clock-weekday-enable" type="button" class="btn btn-block btn-success">Enabled</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="clock-weekday-size" class="col-sm-3 control-label">Weekday font size</label>
+                        <div class="col-sm-9">
+                            <div class="input-group">
+                                <input id="clock-weekday-size" class="form-control" type="number" name="clock-weekday-enable" min="10" max="60" value="20">
+                                <span class="input-group-addon">10&nbsp;<i class="fa fa-long-arrow-right" aria-hidden="true"></i>&nbsp;60</span>
+                            </div>
+                        </div>
+                    </div>
+                    <hr/><!-- ----------------------------------------------------- -->
+                    <div class="form-group">
+                        <label for="clock-format1" class="col-sm-3 control-label">Clock format</label>
+                        <div class="col-sm-9">
+                            <select class="form-control" id="clock-format1">
+                                <option value="%I:%M:%S">05:20:30   (12h clock)</option>
+                                <option value="%I:%M">05:20  (12h clock)</option>
+                                <option value="%I:%M:%S %p">05:20:30 PM   (12h clock)</option>
+                                <option value="%I:%M %p">05:20  PM (12h clock)</option>
+                                <option value="%H:%M:%S">17:20:30   (24h clock)</option>
+                                <option value="%H:%M">17:20  (24h clock)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="clock-size1" class="col-sm-3 control-label">Clock font size</label>
+                        <div class="col-sm-9">
+                            <div class="input-group">
+                                <input id="clock-size1" class="form-control" type="number" name="clock-size1" min="10" max="60" value="30">
+                                <span class="input-group-addon">10&nbsp;<i class="fa fa-long-arrow-right" aria-hidden="true"></i>&nbsp;60</span>
+                            </div>
+                        </div>
+                    </div>
+                    <hr/><!-- ----------------------------------------------------- -->
+                    <div class="form-group">
+                        <label for="clock-format2-enable" class="col-sm-3 control-label">Date</label>
+                        <div class="col-sm-9">
+                            <button id="clock-format2-enable" type="button" class="btn btn-block btn-success">Enabled</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="clock-format2" class="col-sm-3 control-label">Date format</label>
+                        <div class="col-sm-9">
+                            <select class="form-control" id="clock-format2">
+                                <option value="%d/%m/%y">15/05/97</option>
+                                <option value="%m/%d/%y">05/15/97</option>
+                                <option value="%d-%m-%y">15-05-97</option>
+                                <option value="%m-%d-%y">05-15-97</option>
+                                <option value="%d/%m/%Y">15/05/1997</option>
+                                <option value="%m/%d/%Y">05/15/1997</option>
+                                <option value="%d-%m-%Y">15-05-1997</option>
+                                <option value="%m-%d-%Y">05-15-1997</option>
+                                <option value="%d %b %Y">15 may 1997</option>
+                                <option value="%b %d %Y">may 15 1997</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="clock-size2" class="col-sm-3 control-label">Date font size</label>
+                        <div class="col-sm-9">
+                            <div class="input-group">
+                                <input id="clock-size2" class="form-control" type="number" name="clock-size2" min="10" max="60" value="-1">
+                                <span class="input-group-addon">10&nbsp;<i class="fa fa-long-arrow-right" aria-hidden="true"></i>&nbsp;60</span>
+                            </div>
+                        </div>
+                    </div>
+                    <hr/><!-- ----------------------------------------------------- -->
+                    <div class="form-group">
+                        <label for="clock-offset" class="col-sm-3 control-label" title="How many minutes before an appointment the alarm should go off.">Precursor</label>
+                        <div class="col-sm-9">
+                            <div class="input-group">
+                                <input id="clock-offset" class="form-control" type="number" name="clock-offset" min="0" max="240" value="-1">
+                                <span class="input-group-addon">10&nbsp;<i class="fa fa-long-arrow-right" aria-hidden="true"></i>&nbsp;240 min</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="clock-min" class="col-sm-3 control-label">Earliest wake up time</label>
+                        <div class="col-sm-9">
+                            <div class="input-group">
+                                <div class="input-group-btn">
+                                    <button id="clock-min-enable" type="button" class="btn btn-block btn-success">Enabled</button>
+                                </div>
+                                <input id="clock-min" class="form-control" name="clock-min" type="time" value="-1">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="clock-max" class="col-sm-3 control-label">Latest wake up time</label>
+                        <div class="col-sm-9">
+                            <div class="input-group">
+                                <div class="input-group-btn">
+                                    <button id="clock-max-enable" type="button" class="btn btn-block btn-success">Enabled</button>
+                                </div>
+                                <input id="clock-max" class="form-control" name="clock-max" type="time" value="-1">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="clock-days" class="col-sm-3 control-label">Alarm on</label>
+                        <label class="radio-inline">
+                            <input id="clock-days-1" name="clock-days" type="radio"> Weekdays
+                        </label>
+                        <label class="radio-inline">
+                            <input id="clock-days-2" name="clock-days" type="radio"> Weekends
+                        </label>
+                        <label class="radio-inline">
+                            <input id="clock-days-3" name="clock-days" type="radio"> Both
+                        </label>
+                    </div>
+                    <!--
+                    <div class="form-group">
+                        <label for="Alarmtype" class="col-sm-3 control-label">Alarm type</label>
+                        <div class="col-sm-9">
+                            <select class="form-control" id="alarmtype">
+                                <option value="music" selected>Music file</option>
+                                <option value="stream">Stream</option>
+                                <option value="predef">Build in soundeffects</option>
+                            </select>
+                        </div>
+                    </div>
+                    -->
+                    <button type="submit" class="btn btn-block btn-success">Save</button>
+                </form>
             </div>
+            <!-- Google Calender -->
             <div role="tabpanel" class="tab-pane fade" id="gcal">
-                <p>Google cal settings</p>
+                <p>Token status: <span id="gcal-status"></span></p>
             </div>
         </div>
     </div>
@@ -252,5 +230,8 @@
     </div>
 </div>
 
+<script src="js/jquery.js" type="application/javascript"></script>
+<script src="js/bootstrap.js" type="application/javascript"></script>
+<script src="js/custom.js" type="application/javascript"></script>
 </body>
 </html>

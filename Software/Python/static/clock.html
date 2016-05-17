@@ -40,7 +40,7 @@
 
 
         // index of selected option, or -1
-        var i = NETSEL.val();
+        var i = WIFI_DROPDOWN.val();
 
         if (i != -1)
         {
@@ -57,7 +57,7 @@
                 WIFIPASS.attr('readonly', false);
                 AUTHSEL.attr('readonly', true);
             }
-            SSID.val(json_data[i].SSID).attr('readonly', true);
+            WIFI_SSID.val(json_data[i].SSID).attr('readonly', true);
         }
         else // Manual
         {
@@ -67,7 +67,7 @@
                     "<option value='PSA'>PSA</option>" +
                     "<option value='None'>None</option>"
             ).attr('readonly', false).val("");
-            SSID.attr('readonly', false).val("");
+            WIFI_SSID.attr('readonly', false).val("");
             WIFIPASS.attr('readonly', false).val("");
         }
     }
