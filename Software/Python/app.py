@@ -145,7 +145,7 @@ with open(os.getenv('SDL_FBDEV'), 'wb') as outfile:  # Write to SDL_FBDEV (norma
 
 if os.path.exists('/sys/class/net/wlan1'):  # todo: remove (also remove the profile!)
     print('Debug wifi connection (%s)' % datetime.datetime.now())
-    subprocess.call(['netctl', 'start', 'wlan1-DriesFi'])
+    subprocess.call(['netctl', 'start', 'wlan1-Kennes'])
 
 threading.Thread(target=pre_boot_pwm, name='PreBootPWM', daemon=True).start()  # Start the preboot LCD backlight ramp up
 
@@ -249,10 +249,10 @@ def task_update_pwm():  # Task to do the background brightness, handles pulsing 
             if bgt['target'] < bgt['now']:
                 bgt['now'] = max(bgt['target'], bgt['now'] - bgt['step'], bgt['min'], 0)
             else:
-                bgt['now'] = min(bgt['target'], bgt['now'] + bgt['step'], bgt['max'], 1)
+                bgt['now'] = min(bgt['target'], bgt['now'] + bgt['step'], bgt['max'], 100)
             set_brightness(bgt['now'])
         else:  # if we are at target brightness
-            if status['pulsing']: # if pulsing
+            if status['pulsing']:  # if pulsing
                 if bgt['target'] <= bgt['min']:
                     bgt['target'] = bgt['max']
                 else:
@@ -296,7 +296,7 @@ def task_draw_clock():  # Task that draws to the LCD
         height = draw_text(latest['summary'], height=height, font=FONT_S)
         height = draw_text(dateutil.parser.parse(latest['start']['dateTime']).strftime('%a at %H:%M'), height=height, font=FONT_S)
     pygame.display.update()  # Actually commit the LCD
-    CLOCK.enter(0.1, 1, task_draw_clock)
+    CLOCK.enter(0.5, 1, task_draw_clock)
 
 
 def run_clock_thread():  # Helper method, to run the task once manually before passing it off to the scheduler
