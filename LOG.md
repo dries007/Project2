@@ -25,3 +25,4 @@ Datum				| Entry
 12/05/2016  | Vervolg maken verslag en samenvoegen softwaredelen
 14/05/2016  | Vervolg verslag, aanpassen calendar api en python menu
 16/05/2016  | Calendar API in main toevoegen en Verslag software deel
+18/05/2016	| Web interface combineren met python code, verslag en site
