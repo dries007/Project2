@@ -5,7 +5,6 @@
 	height:25px;
 	margin-left: auto;
 	margin-right: auto;
-	text-decoration: underline;
 }
 .dia
 {
@@ -14,7 +13,7 @@
 	margin-left: auto;
 	margin-right: auto;
 	margin-top:50px;
-	margin-bottom:50px;
+	
 }
 .paragraph
 {
@@ -36,8 +35,15 @@ body
 }
 .gridimage
 {
-	width: 300px;
-	height: 300px;
+	max-width: 300px;
+	max-height: 500px;
+}
+.gridimage:active
+{
+	position: absolute;
+	z-index: 999;
+	max-width: 600px;
+	max-height: 1000px;
 }
 .contrasttext
 {
@@ -53,5 +59,18 @@ i
 {
 	color: #ff751a;
 }
-
-
+h3
+{
+	color:#000080;
+}
+.custompan
+{
+	margin-top: 150px;
+}
+.item
+{
+	max-width:900px;
+	max-height: 700px;
+	margin-left: auto;
+	margin-right: auto;
+}

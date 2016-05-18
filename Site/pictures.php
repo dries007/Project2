@@ -5,79 +5,79 @@
 	<h2 class="contrasttext">Image Gallery</h2>
 	<div class="row">
 		<div class="col-md-4">   
-			<img class="gridimage" src="pizerokit.jpg" alt="Raspberry Pi zero starter kit">
+			<img class="gridimage" src="foto's/pizerokit.jpg" alt="Raspberry Pi zero starter kit">
 			<div class="caption">
-				<p class="contrasttext"> Image caption </p>
+				<p class="contrasttext"> The raspberry pi essentials kit bevat een HDMI naar micro HDMI adapter en alle nuttige headers.</p>
 			</div>
 		</div>
 		<div class="col-md-4">
-			<img class="gridimage" src="WiFidongle.jpg" alt="WiFi dongle used">
+			<img class="gridimage" src="foto's/WiFidongle.jpg" alt="WiFi dongle used">
 			<div class="caption">
-				<p class="contrasttext"> Image caption </p>
+				<p class="contrasttext">WiFi dongle.</p>
 			</div>
 		</div>
 		<div class="col-md-4">
-			<img class="gridimage" src="Rotaryencoders.jpg" alt="Rotary encoders with push function">
+			<img class="gridimage" src="foto's/Rotaryencoders.jpg" alt="Rotary encoders with push function">
 			<div class="caption">
-				<p class="contrasttext"> Image caption </p>
+				<p class="contrasttext">Rotary encoder met rotatie en drukknop functie.</p>
 			</div>
 		</div>
 	  </div>
 	  <div class="row">
 		<div class="col-md-4">   
-			<img class="gridimage" src="buzzer.jpg" alt="Back-up buzzer for alarm">
+			<img class="gridimage" src="foto's/buzzer.jpg" alt="Back-up buzzer for alarm">
 			<div class="caption">
-				<p class="contrasttext"> Image caption </p>
+				<p class="contrasttext">Buzzer als back-up alarm.</p>
 			</div>
 		</div>
 		<div class="col-md-4">
-			<img class="gridimage" src="screen.jpg" alt="SPI touchscreen">
+			<img class="gridimage" src="foto's/screen.jpg" alt="SPI touchscreen">
 			<div class="caption">
-				<p class="contrasttext"> Image caption </p>
+				<p class="contrasttext">2.4” 240x320 spi tft LCD (3.3 V)</p>
 			</div>
 		</div>
 		<div class="col-md-4">
-			<img class="gridimage" src="ClockOn.jpg" alt="Rotary encoders with push function">
+			<img class="gridimage" src="foto's/ClockOn.jpg" alt="Werkende klok tijdens ontwikkeling.">
 			<div class="caption">
-				<p class="contrasttext"> Image caption </p>
+				<p class="contrasttext">Werkende klok tijdens ontwikkeling.</p>
 			</div>
 		</div>
 	  </div>
 	  <div class="row">
 		<div class="col-md-4">   
-			<img class="gridimage" src="display_whole.jpg" alt="Raspberry Pi zero starter kit">
+			<img class="gridimage" src="foto's/PCBlayout.png" alt="PCB layout">
 			<div class="caption">
-				<p class="contrasttext"> Image caption </p>
+				<p class="contrasttext">De lay-out van de PCB, gemaakt in Altium.</p>
 			</div>
 		</div>
 		<div class="col-md-4">
-			<img class="gridimage" src="RTC.jpg" alt="WiFi dongle used">
+			<img class="gridimage" src="foto's/sheet1.png" alt="Sheet 1 van het Altium schema.">
 			<div class="caption">
-				<p class="contrasttext"> Image caption </p>
+				<p class="contrasttext">Sheet 1 van het Altium schema.</p>
 			</div>
 		</div>
 		<div class="col-md-4">
-			<img class="gridimage" src="Rotaryencoders.jpg" alt="Rotary encoders with push function">
+			<img class="gridimage" src="foto's/sheet2.png" alt="Sheet  van het Altium schema.">
 			<div class="caption">
-				<p class="contrasttext"> Image caption </p>
+				<p class="contrasttext">Sheet  van het Altium schema.</p>
 			</div>
 		</div>
 	  </div>
 	  <div class="row">
 		<div class="col-md-4">   
-			<img class="gridimage" src="pizerokit.jpg" alt="Raspberry Pi zero starter kit">
+			<img class="gridimage" src="foto's/pizerokit.jpg" alt="Raspberry Pi zero starter kit">
 			<div class="caption">
 				<p class="contrasttext"> Image caption </p>
 			</div>
 		</div>
 		<div class="col-md-4">
-			<img class="gridimage" src="WiFidongle.jpg" alt="WiFi dongle used">
+			<img class="gridimage" src="foto's/WiFidongle.jpg" alt="WiFi dongle used">
 			<div class="caption">
 				<p class="contrasttext"> Image caption </p>
 			</div>
 		</div>
 		<div class="col-md-4">
-			<img class="gridimage" src="Rotaryencoders.jpg" alt="Rotary encoders with push function">
+			<img class="gridimage" src="foto's/Rotaryencoders.jpg" alt="Rotary encoders with push function">
 			<div class="caption">
 				<p class="contrasttext"> Image caption </p>
 			</div>

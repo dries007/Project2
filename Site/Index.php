@@ -14,25 +14,25 @@
 		  <!-- Wrapper for slides -->
 		  <div class="carousel-inner" role="listbox">
 			<div class="item active">
-			  <img src="placeholder.png" alt="foto">
+			  <img src="foto's/sheet1.png" alt="foto">
 			  <div class="carousel-caption">
-				<h3>foto1</h3>
+				<h3>Altium schema sheet 1</h3>
 			  </div>
 			</div>
 			<div class="item">
-			  <img src="placeholder.png" alt="foto">
+			  <img src="foto's/sheet2.png" alt="foto">
 			  <div class="carousel-caption">
-				<h3>foto2</h3>
+				<h3>Altium schema sheet 2</h3>
 			  </div>
 			</div>
 			<div class="item">
-			  <img src="placeholder.png" alt="foto">
+			  <img src="foto's/PCBlayout.png" alt="foto">
 			  <div class="carousel-caption">
-				<h3>foto3</h3>
+				<h3>Altium PCB lay-out</h3>
 			  </div>
 			</div>
 			<div class="item">
-			  <img src="placeholder.png" alt="foto">
+			  <img src="foto's/placeholder.png" alt="foto">
 			  <div class="carousel-caption">
 				<h3>foto4</h3>
 			  </div>
@@ -49,9 +49,8 @@
 			<span class="sr-only">Next</span>
 		  </a>
 		</div>
-	</div>
-	<div class="paragraph container">
-		<div class="panel panel-primary">
+			<div class="paragraph container">
+		<div class="custompan panel panel-primary">
 		  <div class="panel-heading">
 			<h3 class="panel-title">Panel title</h3>
 		  </div>
@@ -59,6 +58,7 @@
 			Panel content
 		  </div>
 		</div>
+	</div>
 	</div>
 	
 <?php include "footer.php";?>
