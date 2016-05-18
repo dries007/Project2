@@ -10,9 +10,27 @@ import time
 import json
 import sys
 
+from enum import Enum
+from enum import unique
+
 # ############################## Definitions
 VERSION = '0.1'
 SETTINGS_FILE = "/root/www/settings.json"
+
+
+@unique
+class Menu(Enum):  # Main Menu enum. If setting is None, its a toggle
+    Exit = {'name': 'Exit', 'setting': None}
+    Show_IP = {'name': 'Show IP', 'setting': None}
+    Set_Volume = {'name': 'Set Volume', 'setting': ('sound', 'volume')}
+    Set_Brightness = {'name': 'Set Brightness', 'setting': ('brightness', 'preference')}
+
+
+@unique
+class Days(Enum):  # Days enum.
+    Weekdays = [1, 2, 3, 4, 5]
+    Weekends = [6, 7]
+    Both = [1, 2, 3, 4, 5, 6, 7]
 
 # Volatile storage
 status = {
@@ -32,7 +50,7 @@ status = {
 # Permanent storage
 settings = {
     'day': {
-        'format': '%A',
+        'enabled': True,
         'size': 40
     },
     'clock': {
@@ -40,11 +58,21 @@ settings = {
         'size': 60
     },
     'date': {
-        'format': '%Y-%m-%d',
+        'enabled': True,
+        'format': '%d-%m-%y',
         'size': 36
     },
+    'alarm': {
+        'offset': 60,
+        'min': 6 * 60,
+        'max': 12 * 60,
+        'days': Days.Weekdays
+    },
     'sound': {
-        'volume': 50
+        'volume': 50,
+        'min': 15,
+        'step': 1,
+        'max': 100
     },
     'brightness': {
         'preference': 50,
@@ -74,7 +102,7 @@ class EnumEncoder(json.JSONEncoder):  # Required for json encoding Enums
 
 
 def save():  # Save settings
-    json.dump(settings, open(SETTINGS_FILE, 'w'), indent=2)
+    json.dump(settings, open(SETTINGS_FILE, 'w'), indent=2, cls=EnumEncoder)
 
 
 def clamp(n, minn=0, maxn=100):  # Clamp value between 0 and 100 by default
@@ -83,6 +111,12 @@ def clamp(n, minn=0, maxn=100):  # Clamp value between 0 and 100 by default
 
 def set_brightness(percent=100):  # Set PWM of LCD background LED via gpio program because the GPIO python module
     subprocess.call(['gpio', '-g', 'pwm', '12', '%.0f' % (clamp(percent) * 10.23)])
+
+
+def as_enum(full):
+    if full is None: return None
+    name, member = full.split(".")
+    return getattr(globals()[name], member)
 
 
 def pre_boot_pwm():  # While booting, ramp up the LCD backlight from 0 to 100% over 2 seconds
@@ -111,8 +145,7 @@ with open(os.getenv('SDL_FBDEV'), 'wb') as outfile:  # Write to SDL_FBDEV (norma
 
 if os.path.exists('/sys/class/net/wlan1'):  # todo: remove (also remove the profile!)
     print('Debug wifi connection (%s)' % datetime.datetime.now())
-    subprocess.call(['netctl', 'start', 'wlan1-Kennes'])
-    print('Connected to Kennes on wlan1 (%s)' % datetime.datetime.now())
+    subprocess.call(['netctl', 'start', 'wlan1-DriesFi'])
 
 threading.Thread(target=pre_boot_pwm, name='PreBootPWM', daemon=True).start()  # Start the preboot LCD backlight ramp up
 
@@ -129,9 +162,6 @@ import sched
 import dateutil.parser
 import signal
 
-from enum import Enum
-from enum import unique
-
 # ############################## Definitions
 
 
@@ -141,14 +171,6 @@ def signal_handler(signal, frame):  # Required to avoid pygame.display.init hang
     pygame.quit()
     GPIO.cleanup()  # last, because its possible it may throw up, if GPIO hasn't imported yet. That is fine, if it happens after pygame.quit
     sys.exit(0)
-
-
-@unique
-class Menu(Enum):  # Main Menu enum. If setting is None, its a toggle
-    Exit = {'name': 'Exit', 'setting': None}
-    Show_IP = {'name': 'Show IP', 'setting': None}
-    Set_Volume = {'name': 'Set Volume', 'setting': ('sound', 'volume')}
-    Set_Brightness = {'name': 'Set Brightness', 'setting': ('brightness', 'preference')}
 
 # ############################## Sequential code
 signal.signal(signal.SIGTERM, signal_handler)  # Handle kill command
@@ -178,11 +200,13 @@ SCREEN.fill(BLACK)  # Clear screen
 print('Done init pygame & clear ... (%s)' % datetime.datetime.now())
 
 if os.path.isfile(SETTINGS_FILE):
-    settings = json.load(open(SETTINGS_FILE))
-
-FONT_DAY = pygame.font.SysFont('notomono', settings['day']['size'])  # Same monospaced font, just with customizable size
-FONT_CLOCK = pygame.font.SysFont('notomono', settings['clock']['size'])
-FONT_DATE = pygame.font.SysFont('notomono', settings['date']['size'])
+    try:
+        settings.update(json.load(open(SETTINGS_FILE)))
+        settings['alarm']['days'] = as_enum(settings['alarm']['days'])
+    except json.decoder.JSONDecodeError:
+        print('Config file unreadable, lets just throw it away and start fresh')
+else:
+    save()
 
 # ####################################### BOOT SEQ, PART 3 - Scheduler
 print('Boot sequence part 3 - Scheduler (%s)' % datetime.datetime.now())
@@ -233,7 +257,7 @@ def task_update_pwm():  # Task to do the background brightness, handles pulsing 
                     bgt['target'] = bgt['max']
                 else:
                     bgt['target'] = bgt['min']
-            else: # if not pulsing
+            else:  # if not pulsing
                 bgt['target'] = bgt['preference']
     CLOCK.enter(0.1, 2, task_update_pwm)
 
@@ -241,11 +265,14 @@ def task_update_pwm():  # Task to do the background brightness, handles pulsing 
 def task_draw_clock():  # Task that draws to the LCD
     height = 0
     if status['draw']['clock']:  # draw the main clock
-        height = draw_text(datetime.datetime.now().strftime(settings['day']['format']), height=height, font=FONT_DAY)
-        height -= (FONT_CLOCK.get_height() * 0.1)
-        height = draw_text(datetime.datetime.now().strftime(settings['clock']['format']), height=height, font=FONT_CLOCK)
-        height -= (FONT_CLOCK.get_height() * 0.1)
-        height = draw_text(datetime.datetime.now().strftime(settings['date']['format']), height=height, font=FONT_DATE)
+        font = pygame.font.SysFont('notomono', settings['day']['size'])
+        height = draw_text(datetime.datetime.now().strftime('%A'), height=height, font=font)
+        height -= (font.get_height() * 0.1)
+        font = pygame.font.SysFont('notomono', settings['clock']['size'])
+        height = draw_text(datetime.datetime.now().strftime(settings['clock']['format']), height=height, font=font)
+        height -= (font.get_height() * 0.1)
+        font = pygame.font.SysFont('notomono', settings['date']['size'])
+        height = draw_text(datetime.datetime.now().strftime(settings['date']['format']), height=height, font=font)
     if 'user_code' in status['gcal']:  # if we need to register the devie with gcal
         height = draw_text(status['gcal']['verification_url'], height=height, font=FONT_S)
         height = draw_text("Code: " + status['gcal']['user_code'], height=height, font=FONT_S)
@@ -351,6 +378,9 @@ def gcal_request_token():  # Do a new token request, overrides all old gcal data
     status['gcal']['user_code'] = out['user_code']
     status['gcal']['verification_url'] = out['verification_url']
     status['gcal']['expires'] = datetime.datetime.now() + datetime.timedelta(seconds=out['expires_in'] - 10)  # 10 sec for safety
+    if 'gcal' in settings:
+        del settings['gcal']
+        save()
     CLOCK.enter(out['interval'], 3, gcal_poll)
 
 
@@ -495,7 +525,7 @@ def api_wifi():  # Get the list of wifi networks OR set the wifi profile setting
         # Regex yey
         re_cell = re.compile(r'Cell \d+')
         re_mac = re.compile(r'Address: (?P<Address>.*)')
-        re_ssid = re.compile(r'ESSID:"(?P<WIFI_SSID>.*)"')
+        re_ssid = re.compile(r'ESSID:"(?P<SSID>.*)"')
         re_quality = re.compile(r'Quality=(?P<Quality>\d+)/100')
         re_signal = re.compile(r'Signal level=(?P<SignalLevel>\d+)/100')
         re_encrypted = re.compile(r'Encryption key:(?P<Protected>on|off)')
@@ -521,14 +551,33 @@ def api_wifi():  # Get the list of wifi networks OR set the wifi profile setting
         return Response(json.dumps(data, cls=EnumEncoder), mimetype='text/javascript')
 
 
-@app.route('/settings')
-def api_settings():  # Dump the settings
-    return Response(json.dumps(settings, cls=EnumEncoder), mimetype='text/javascript')
+@app.route('/settings', methods=['GET', 'POST'])
+def api_settings():  # GET: Dump the settings POST: Set settings
+    if request.method == 'GET':
+        return Response(json.dumps(settings, cls=EnumEncoder), mimetype='text/javascript')
+    else:
+        settings.update(request.get_json())
+        settings['alarm']['days'] = as_enum(settings['alarm']['days'])
+        save()
+        return 'OK'
 
 
-@app.route('/status')
-def api_status():  # Dump the status
-    return Response(json.dumps(status, cls=EnumEncoder), mimetype='text/javascript')
+@app.route('/resetgcal', methods=['POST'])
+def api_resetgcal():  # Reset (and restart) the gcal linking process
+    gcal_request_token()
+    return 'OK'
+
+
+@app.route('/status', methods=['GET', 'POST'])
+def api_status():  # GET: Dump the status POST: Set status
+    if request.method == 'GET':
+        return Response(json.dumps(status, cls=EnumEncoder), mimetype='text/javascript')
+    else:
+        status.update(request.get_json())
+        status['draw']['option'] = as_enum(status['draw']['option'])
+        status['menu'] = as_enum(status['menu'])
+        save()
+        return 'OK'
 
 # ############################## Sequential code
 print('Starting webserver... (%s)' % datetime.datetime.now())
