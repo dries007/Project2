@@ -246,7 +246,7 @@ CLOCK_FORM.submit(function ()
                     'size': parseInt(CLOCK_SIZE2.val())
                 },
                 'alarm': {
-                    'offset': CLOCK_OFFSET.val(),
+                    'offset': parseInt(CLOCK_OFFSET.val()),
                     'min': CLOCK_MIN_ENABLE.hasClass('btn-success') ? timeToMin(CLOCK_MIN.val()) : -1,
                     'max': CLOCK_MAX_ENABLE.hasClass('btn-success') ? timeToMin(CLOCK_MAX.val()) : -1,
                     'days': $('input:radio[name="clock-days"]:checked').val()

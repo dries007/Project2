@@ -193,6 +193,7 @@ FONT_XL = pygame.font.SysFont('notomono', 60)  # Monospace fonts
 FONT_L = pygame.font.SysFont('notomono', 36)
 FONT_M = pygame.font.SysFont('notomono', 26)
 FONT_S = pygame.font.SysFont('notomono', 15)
+FONT_ICO = pygame.font.SysFont('fontawesome', 15)
 
 SIZE = (pygame.display.Info().current_w, pygame.display.Info().current_h)  # Screen size
 SCREEN = pygame.display.set_mode(SIZE, pygame.FULLSCREEN)  # Screen surface
@@ -239,8 +240,15 @@ def task_update_ip():  # Task to periodically update the IP to be displayed
     CLOCK.enter(10, 10, task_update_ip)
 
 
+def task_update_font():
+    threadLocal.font_day = pygame.font.SysFont('notomono', settings['day']['size'])
+    threadLocal.font_clock = pygame.font.SysFont('notomono', settings['clock']['size'])
+    threadLocal.date_clock = pygame.font.SysFont('notomono', settings['date']['size'])
+
+
 def task_update_pwm():  # Task to do the background brightness, handles pulsing effect if required
     bgt = settings['brightness']
+    bgt['target'] = clamp(bgt['target'], bgt['min'], bgt['max'])
     if status['draw']['option'] == Menu.Set_Brightness:  # If we are drawing the brightness slider, give instant feedback
         set_brightness(bgt['preference'])
     else:  # If not drawing the brightness slider
@@ -265,14 +273,11 @@ def task_update_pwm():  # Task to do the background brightness, handles pulsing 
 def task_draw_clock():  # Task that draws to the LCD
     height = 0
     if status['draw']['clock']:  # draw the main clock
-        font = pygame.font.SysFont('notomono', settings['day']['size'])
-        height = draw_text(datetime.datetime.now().strftime('%A'), height=height, font=font)
-        height -= (font.get_height() * 0.1)
-        font = pygame.font.SysFont('notomono', settings['clock']['size'])
-        height = draw_text(datetime.datetime.now().strftime(settings['clock']['format']), height=height, font=font)
-        height -= (font.get_height() * 0.1)
-        font = pygame.font.SysFont('notomono', settings['date']['size'])
-        height = draw_text(datetime.datetime.now().strftime(settings['date']['format']), height=height, font=font)
+        height = draw_text(datetime.datetime.now().strftime('%A'), height=height, font=threadLocal.font_day)
+        height -= (threadLocal.font_day.get_height() * 0.1)
+        height = draw_text(datetime.datetime.now().strftime(settings['clock']['format']), height=height, font=threadLocal.font_clock)
+        height -= (threadLocal.font_clock.get_height() * 0.1)
+        height = draw_text(datetime.datetime.now().strftime(settings['date']['format']), height=height, font=threadLocal.date_clock)
     if 'user_code' in status['gcal']:  # if we need to register the devie with gcal
         height = draw_text(status['gcal']['verification_url'], height=height, font=FONT_S)
         height = draw_text("Code: " + status['gcal']['user_code'], height=height, font=FONT_S)
@@ -290,17 +295,24 @@ def task_draw_clock():  # Task that draws to the LCD
             height = draw_text(status['draw']['option'].value['name'] + ': %d%%' % current, height=height, font=FONT_S)
             pygame.draw.rect(SCREEN, WHITE, (0, height, SIZE[0] * (current / 100), 5))  # Draw the rectangle below the text and % value
             height += 5  # Need to move 5 px down manually
-    elif 'items' in status and status['items'] and len(status['items']) > 0:  # If we have a next appointment
-        latest = status['items'][0]  # most imminent appointment
-        height = draw_text("Next appointment:", height=height, font=FONT_S)
-        height = draw_text(latest['summary'], height=height, font=FONT_S)
-        height = draw_text(dateutil.parser.parse(latest['start']['dateTime']).strftime('%a at %H:%M'), height=height, font=FONT_S)
+    else:
+        if 'alarm' in status:
+            draw_text('\uf0a1', height=height, font=FONT_ICO, center=False)
+            height = draw_text(status['alarm'].strftime('%a at %H:%M'), height=height, font=FONT_S)
+        if 'items' in status and status['items'] and len(status['items']) > 0:  # If we have a next appointment
+            latest = status['items'][0]  # most imminent appointment
+            draw_text('\uf133', height=height, font=FONT_ICO, center=False)
+            line = (latest['summary'][:15] + '..') if len(latest['summary']) > 75 else latest['summary']
+            line += ' ' + dateutil.parser.parse(latest['start']['dateTime']).strftime('%a at %H:%M')
+            height = draw_text(line, height=height, font=FONT_S)
+
     pygame.display.update()  # Actually commit the LCD
     CLOCK.enter(0.5, 1, task_draw_clock)
 
 
 def run_clock_thread():  # Helper method, to run the task once manually before passing it off to the scheduler
     status['booting'] = False  # We are now out of booting
+    task_update_font()
     task_update_ip()
     task_update_pwm()
     task_draw_clock()
@@ -390,16 +402,42 @@ def gcal_get_events():  # Pull in new events, if token is expired / missing it w
     out = json.loads(requests.get('https://www.googleapis.com/calendar/v3/calendars/%s/events' % settings['gcal']['calendar_id'], headers={
         'Authorization': status['gcal']['token_type'] + ' ' + status['gcal']['access_token']
     }, params={
-        'timeMin': datetime.datetime.now().isoformat('T') + 'z',
-        'timeMax': (datetime.datetime.now() + datetime.timedelta(days=7)).isoformat('T') + 'z',
+        'timeMin': datetime.datetime.now(datetime.timezone.utc).astimezone().isoformat('T'),
+        'timeMax': (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=7)).astimezone().isoformat('T'),
         'singleEvents': True,
         'orderBy': 'startTime'
     }).text)
     if 'items' not in out:
         print('No items in response gcal_get_events')
+        print(out)
         status['items'] = None
         return False
     status['items'] = out['items']
+    next_event()
+
+
+def next_event():
+    if 'items' not in status or len(status['items']) == 0:
+        status['alarm'] = None
+        return
+    for item in status['items']:
+        alarm = dateutil.parser.parse(item['start']['dateTime'])
+        if alarm.isoweekday() not in settings['alarm']['days'].value:
+            print('Event not in target days, skipping. %s' % item['summary'])
+            continue
+        alarm - datetime.timedelta(minutes=settings['alarm']['offset'])
+        if (alarm.hour * 60) + alarm.minute < settings['alarm']['min']:
+            alarm = alarm.replace(hour=settings['alarm']['min'] // 60, minute=settings['alarm']['min'] % 60)
+        if (alarm.hour * 60) + alarm.minute > settings['alarm']['max']:
+            alarm = alarm.replace(hour=settings['alarm']['max'] // 60, minute=settings['alarm']['max'] % 60)
+        status['alarm'] = alarm
+        CLOCK.enterabs(alarm.timestamp() - 300, 1, task_alarm)
+        break
+
+
+def task_alarm():
+    print('ALAAAAAAAAAAAAAAAAAAAAAAAAAAARM')
+
 
 
 # ############################## Sequential code
@@ -535,7 +573,7 @@ def api_wifi():  # Get the list of wifi networks OR set the wifi profile setting
         proc = subprocess.Popen(['iwlist', 'wlan0', 'scan'], stdout=subprocess.PIPE, universal_newlines=True)
         out, err = proc.communicate()
 
-        data = [] # data array
+        data = []  # data array
         cell = None  # Used to remeber the last object we are working on
         for line in out.split('\n'):
             line = line.strip()  # strip whitespace
@@ -558,6 +596,7 @@ def api_settings():  # GET: Dump the settings POST: Set settings
     else:
         settings.update(request.get_json())
         settings['alarm']['days'] = as_enum(settings['alarm']['days'])
+        CLOCK.enter(0, 1, task_update_font)
         save()
         return 'OK'
 
