@@ -145,7 +145,7 @@ with open(os.getenv('SDL_FBDEV'), 'wb') as outfile:  # Write to SDL_FBDEV (norma
 
 if os.path.exists('/sys/class/net/wlan1'):  # todo: remove (also remove the profile!)
     print('Debug wifi connection (%s)' % datetime.datetime.now())
-    subprocess.call(['netctl', 'start', 'wlan1-Kennes'])
+    subprocess.call(['netctl', 'start', 'wlan1-DriesFi'])
 
 threading.Thread(target=pre_boot_pwm, name='PreBootPWM', daemon=True).start()  # Start the preboot LCD backlight ramp up
 
