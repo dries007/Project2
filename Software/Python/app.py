@@ -43,6 +43,7 @@ status = {
     'menu': None,
     'clock': False,
     'pulsing': False,
+    'streaming': False,
     'gcal': {
 
     }
@@ -66,7 +67,8 @@ settings = {
         'offset': 60,
         'min': 6 * 60,
         'max': 12 * 60,
-        'days': Days.Weekdays
+        'days': Days.Weekdays,
+        'stream': 'MNM Hits'
     },
     'sound': {
         'volume': 50,
@@ -89,6 +91,18 @@ gcal = {
     'client_secret': os.getenv('APP_GCAL_SECRET'),
     'scope': 'https://www.googleapis.com/auth/calendar.readonly'
 }
+# List of pre-defined streams
+streams = {
+    'MNM': 'http://mp3.streampower.be/mnm-high.mp3',
+    'MNM Hits': 'http://mp3.streampower.be/mnm_hits-high.mp3',
+    'Studio Brussel': 'http://mp3.streampower.be/stubru-high.mp3',
+    'Klara': 'http://mp3.streampower.be/klara-high.mp3',
+    'Radio 1': 'http://mp3.streampower.be/radio1-high.mp3',
+    'Radio 2 Antwerpen': 'http://mp3.streampower.be/ra2ant-high.mp3'
+}
+# Misc globals
+music_process = None
+
 if gcal['client_id'] is None or gcal['client_secret'] is None:
     print('APP_GCAL_ID and or APP_GCAL_SECRET not set.')
     sys.exit(1)
@@ -101,6 +115,10 @@ class EnumEncoder(json.JSONEncoder):  # Required for json encoding Enums
         return json.JSONEncoder.default(self, obj)
 
 
+def set_volume():  # Send volume to alsa
+    subprocess.call(['amixer', 'sset', 'PCM,0', '%.0f%%' % (50 + (settings['sound']['volume'] / 2)), '-M'])
+
+
 def save():  # Save settings
     json.dump(settings, open(SETTINGS_FILE, 'w'), indent=2, cls=EnumEncoder)
 
@@ -109,27 +127,48 @@ def clamp(n, minn=0, maxn=100):  # Clamp value between 0 and 100 by default
     return max(min(maxn, n), minn)
 
 
-def set_brightness(percent=100):  # Set PWM of LCD background LED via gpio program because the GPIO python module
-    subprocess.call(['gpio', '-g', 'pwm', '12', '%.0f' % (clamp(percent) * 10.23)])
-
-
-def as_enum(full):
-    if full is None: return None
+def as_enum(full):  # Go back from "<Class>.<Name>" to actual enum instance, has to be activated manually per enum!
+    if full is None:
+        return None
     name, member = full.split(".")
     return getattr(globals()[name], member)
 
 
-def pre_boot_pwm():  # While booting, ramp up the LCD backlight from 0 to 100% over 2 seconds
-    i = 0
-    while status['booting'] and i < 100:
-        set_brightness(i)
-        time.sleep(0.2)
-        i += 1
-    set_brightness(100)
+def stream_start():
+    global music_process
+    if music_process is not None:
+        return
+    stream = streams[settings['alarm']['stream']] if settings['alarm']['stream'] in streams else settings['alarm']['stream']
+    status['streaming'] = True
+    music_process = subprocess.Popen(['mpg123', '-T', stream], universal_newlines=True, bufsize=1, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    def stream_parser():
+        re_title = re.compile(r"ICY-META: StreamTitle='(.*)';")
+        while music_process is not None and music_process.poll() is None:
+            line = music_process.stderr.readline()
+            matcher = re_title.search(line)
+            if matcher:
+                status['draw']['title'] = matcher.group(1)
+        if 'title' in status['draw']:
+            del status['draw']['title']
+
+    threading.Thread(target=stream_parser, name='StreamParser', daemon=True).start()
+
+
+def stream_stop():
+    global music_process
+    if music_process is None:
+        return
+    if music_process.poll() is None:
+        music_process.terminate()
+        music_process.wait()
+    status['streaming'] = False
+    music_process = None
+
 
 # ############################## Sequential code
-subprocess.call(['gpio', '-g', 'mode', '12', 'pwm'])  # set pwm pin
-set_brightness(0)  # Set the backlight to off
+# subprocess.call(['gpio', '-g', 'mode', '12', 'pwm'])  # set pwm pin
+subprocess.call(['gpio_alt', '-p', '13', '-f', '0'])  # set pwm pin sound
 subprocess.call(['create_ap', '--stop', 'wlan0'])  # Kill any existing ap
 subprocess.call(['killall', 'hostapd'])  # Sometimes the above isn't enough
 
@@ -145,12 +184,97 @@ with open(os.getenv('SDL_FBDEV'), 'wb') as outfile:  # Write to SDL_FBDEV (norma
 
 if os.path.exists('/sys/class/net/wlan1'):  # todo: remove (also remove the profile!)
     print('Debug wifi connection (%s)' % datetime.datetime.now())
-    subprocess.call(['netctl', 'start', 'wlan1-DriesFi'])
+    subprocess.call(['netctl', 'start', 'wlan1-Kennes'])
 
+# ####################################### BOOT SEQ, PART 2 - GPIO
+print('Boot sequence part 2 - GPIO (%s)' % datetime.datetime.now())
+# ############################## Imports
+# noinspection PyUnresolvedReferences
+import RPi.GPIO as GPIO
+# ############################## Definitions
+RE_A = 16
+RE_B = 5
+RE_S = 6
+ALARM_S = 27
+PWM_BG = 12
+
+
+def set_brightness(percent=100):  # Set PWM of LCD background LED via gpio program because the GPIO python module
+    p.ChangeDutyCycle(percent)
+    # subprocess.call(['gpio', '-g', 'pwm', '12', '%.0f' % (clamp(percent) * 10.23)])
+
+
+def pre_boot_pwm():  # While booting, ramp up the LCD backlight from 0 to 100% over 2 seconds
+    i = 0
+    while status['booting'] and i < 100:
+        set_brightness(i)
+        time.sleep(0.2)
+        i += 1
+    set_brightness(100)
+
+
+def int_btn_alarm(chan):  # 'Interrupt' handler of alarm button
+    print('BTN: ALARM')
+    if 'alarm' in status:
+        if int(status['alarm'].replace(second=0, microsecond=0).timestamp() - datetime.datetime.now().replace(second=0, microsecond=0).timestamp()) < 600:
+            del status['alarm']
+            del status['draw']['alarm']
+            if status['streaming']:
+                stream_stop()
+            return
+    if status['streaming']:
+        stream_stop()
+    else:
+        stream_start()
+
+
+def int_btn_ok(chan):  # 'Interrupt' handler button of rot encoder
+    print('BTN: OK')
+    if not status['draw']['clock']:
+        return
+    if status['menu']:
+        status['draw']['option'] = None if status['menu'] == Menu.Exit else status['menu']
+        status['menu'] = None
+    elif status['draw']['option']:
+        status['draw']['option'] = None
+        save()
+    else:
+        status['menu'] = Menu.Show_IP
+
+
+def int_rot(chan):  # 'Interrupt' handler for A of rotary encoder
+    a = GPIO.input(RE_A)
+    if a:  # Since A triggers on falling edge, it should be 0, if not, debounce
+        return
+    b = GPIO.input(RE_B)  # To get the direction, pull B
+    print('Rotate: %s' % ('Right,+' if b else 'Left,-'))
+    if status['menu']:  # If we are in menu, go left or right
+        items = list(Menu)
+        i = items.index(status['menu'])
+        status['menu'] = items[(i + (1 if b else -1)) % len(items)]
+    elif status['draw']['option']:  # If we are doing a setting
+        if status['draw']['option'].value['setting']:
+            setting = status['draw']['option'].value['setting']
+            current = settings
+            for key in setting[:-1]:  # Go down the the sencond to last object and property name, so it can be set by reference
+                current = current[key]
+            current[setting[-1]] = clamp(current[setting[-1]] + (1 if b else -1))
+            set_volume()
+
+# ############################## Sequential code
+GPIO.setmode(GPIO.BCM)
+GPIO.setwarnings(False)
+GPIO.setup([RE_A, RE_B, RE_S, ALARM_S], GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.setup(PWM_BG, GPIO.OUT)
+p = GPIO.PWM(PWM_BG, 250)
+p.start(0)
+GPIO.add_event_detect(RE_A, GPIO.FALLING, callback=int_rot, bouncetime=25)
+GPIO.add_event_detect(RE_S, GPIO.FALLING, callback=int_btn_ok, bouncetime=200)
+GPIO.add_event_detect(ALARM_S, GPIO.FALLING, callback=int_btn_alarm, bouncetime=200)
 threading.Thread(target=pre_boot_pwm, name='PreBootPWM', daemon=True).start()  # Start the preboot LCD backlight ramp up
 
-# ####################################### BOOT SEQ, PART 2 - Pygame
-print('Boot sequence part 2 - Pygame (%s)' % datetime.datetime.now())
+# ####################################### BOOT SEQ, PART 3 - Pygame
+print('Boot sequence part 3 - Pygame (%s)' % datetime.datetime.now())
 # ############################## Imports
 # noinspection PyUnresolvedReferences
 import pygame
@@ -169,6 +293,7 @@ def signal_handler(signal, frame):  # Required to avoid pygame.display.init hang
     print('EXIT: SIGTERM or SIGINT (%s)' % datetime.datetime.now())
     time.sleep(1)
     pygame.quit()
+    p.stop()
     GPIO.cleanup()  # last, because its possible it may throw up, if GPIO hasn't imported yet. That is fine, if it happens after pygame.quit
     sys.exit(0)
 
@@ -179,10 +304,6 @@ signal.signal(signal.SIGINT, signal_handler)  # Handle Control-C
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
-
-RE_A = 16
-RE_B = 5
-RE_S = 6
 
 print('Init pygame... (%s)' % datetime.datetime.now())
 pygame.display.init()  # This call takes a while, it can also hang if pygame wasn't quited last time, hence the kill/^C handling
@@ -204,13 +325,14 @@ if os.path.isfile(SETTINGS_FILE):
     try:
         settings.update(json.load(open(SETTINGS_FILE)))
         settings['alarm']['days'] = as_enum(settings['alarm']['days'])
+        set_volume()
     except json.decoder.JSONDecodeError:
         print('Config file unreadable, lets just throw it away and start fresh')
 else:
     save()
 
-# ####################################### BOOT SEQ, PART 3 - Scheduler
-print('Boot sequence part 3 - Scheduler (%s)' % datetime.datetime.now())
+# ####################################### BOOT SEQ, PART 4 - Scheduler
+print('Boot sequence part 4 - Scheduler (%s)' % datetime.datetime.now())
 # ############################## Definitions
 
 
@@ -228,7 +350,7 @@ def draw_text(message, font=FONT_S, color=WHITE, height=0, center=True):  # Draw
 
 def error(message):  # Special message display, used for 'fatal crashes'
     SCREEN.fill(BLACK)
-    height = draw_text('SmartClock (%s)' % VERSION, FONT_M)
+    height = draw_text('SmartAlarmClock (%s)' % VERSION, FONT_M)
     height = draw_text('Fatal Error', color=RED, height=height)
     draw_text(message, height=height)
     while True:  # Goodbye cruel world. We can't exit because it would clear the screen.
@@ -240,7 +362,7 @@ def task_update_ip():  # Task to periodically update the IP to be displayed
     CLOCK.enter(10, 10, task_update_ip)
 
 
-def task_update_font():
+def task_update_font():   # To make the font objects updatable, but not waste resources
     threadLocal.font_day = pygame.font.SysFont('notomono', settings['day']['size'])
     threadLocal.font_clock = pygame.font.SysFont('notomono', settings['clock']['size'])
     threadLocal.date_clock = pygame.font.SysFont('notomono', settings['date']['size'])
@@ -271,7 +393,7 @@ def task_update_pwm():  # Task to do the background brightness, handles pulsing 
 
 
 def task_draw_clock():  # Task that draws to the LCD
-    height = 0
+    height = 0  # To make adding code easy, leftover/unnecessary height assignments are left in the code on purpose!
     if status['draw']['clock']:  # draw the main clock
         height = draw_text(datetime.datetime.now().strftime('%A'), height=height, font=threadLocal.font_day)
         height -= (threadLocal.font_day.get_height() * 0.1)
@@ -296,18 +418,23 @@ def task_draw_clock():  # Task that draws to the LCD
             pygame.draw.rect(SCREEN, WHITE, (0, height, SIZE[0] * (current / 100), 5))  # Draw the rectangle below the text and % value
             height += 5  # Need to move 5 px down manually
     else:
-        if 'alarm' in status:
+        if 'alarm' in status['draw']:
             draw_text('\uf0a1', height=height, font=FONT_ICO, center=False)
-            height = draw_text(status['alarm'].strftime('%a at %H:%M'), height=height, font=FONT_S)
-        if 'items' in status and status['items'] and len(status['items']) > 0:  # If we have a next appointment
-            latest = status['items'][0]  # most imminent appointment
+            height = draw_text(status['draw']['alarm'], height=height, font=FONT_S)
+        if 'next' in status['draw']:
             draw_text('\uf133', height=height, font=FONT_ICO, center=False)
-            line = (latest['summary'][:15] + '..') if len(latest['summary']) > 75 else latest['summary']
-            line += ' ' + dateutil.parser.parse(latest['start']['dateTime']).strftime('%a at %H:%M')
-            height = draw_text(line, height=height, font=FONT_S)
-
+            height = draw_text(status['draw']['next'], height=height, font=FONT_S)
+        if 'title' in status['draw']:
+            draw_text('\uf001', height=height, font=FONT_ICO, center=False)
+            height = draw_text(status['draw']['title'][:30], height=height, font=FONT_S)
     pygame.display.update()  # Actually commit the LCD
     CLOCK.enter(0.5, 1, task_draw_clock)
+
+
+def task_check_gcal():
+    print('Checking gcal (%s)' % datetime.datetime.now())
+    gcal_get_events()
+    CLOCK.enter(60 * 30, 2, task_check_gcal)
 
 
 def run_clock_thread():  # Helper method, to run the task once manually before passing it off to the scheduler
@@ -316,7 +443,29 @@ def run_clock_thread():  # Helper method, to run the task once manually before p
     task_update_ip()
     task_update_pwm()
     task_draw_clock()
+    task_check_gcal()
+    task_alarm_check()
     CLOCK.run()
+
+
+def task_alarm_check():
+    if 'alarm' in status:
+        print('Alarm poll')
+        if int(status['alarm'].replace(second=0, microsecond=0).timestamp() - datetime.datetime.now().replace(second=0, microsecond=0).timestamp()) == 600:
+            print('10 minute mark')
+            status['pulsing'] = True
+        if int(status['alarm'].replace(second=0, microsecond=0).timestamp() - datetime.datetime.now().replace(second=0, microsecond=0).timestamp()) == 300:
+            print('5 minute mark')
+            status['pulsing'] = True
+        if int(status['alarm'].replace(second=0, microsecond=0).timestamp() - datetime.datetime.now().replace(second=0, microsecond=0).timestamp()) == 60:
+            print('1 minute mark')
+            status['pulsing'] = True
+        if int(status['alarm'].replace(second=0, microsecond=0).timestamp() - datetime.datetime.now().replace(second=0, microsecond=0).timestamp()) == 0:
+            print('alarm time')
+            status['pulsing'] = True
+            stream_start()
+            del status['draw']['alarm']
+    CLOCK.enter(30, 1, task_alarm_check)
 
 
 def attempt_connect(height=0):  # Try to connect to the wifi network set via settings['wifiProfile']
@@ -340,7 +489,9 @@ def attempt_connect(height=0):  # Try to connect to the wifi network set via set
     return height
 
 
-def gcal_refresh():  # Refresh our token, No error checking is done here!
+def gcal_refresh():  # Refresh our token
+    if not status['network'] or 'refresh_token' not in settings['gcal']:
+        return
     out = json.loads(requests.post('https://www.googleapis.com/oauth2/v4/token', data={
         'refresh_token': settings['gcal']['refresh_token'],
         'client_id': gcal['client_id'],
@@ -399,6 +550,8 @@ def gcal_request_token():  # Do a new token request, overrides all old gcal data
 def gcal_get_events():  # Pull in new events, if token is expired / missing it will request a new one.
     if 'calendar_id' not in status['gcal'] or datetime.datetime.now() > status['gcal']['expires']:
         gcal_refresh()
+    if 'access_token' not in status['gcal']:
+        return  # Something exploded.
     out = json.loads(requests.get('https://www.googleapis.com/calendar/v3/calendars/%s/events' % settings['gcal']['calendar_id'], headers={
         'Authorization': status['gcal']['token_type'] + ' ' + status['gcal']['access_token']
     }, params={
@@ -413,31 +566,26 @@ def gcal_get_events():  # Pull in new events, if token is expired / missing it w
         status['items'] = None
         return False
     status['items'] = out['items']
-    next_event()
-
-
-def next_event():
-    if 'items' not in status or len(status['items']) == 0:
-        status['alarm'] = None
-        return
     for item in status['items']:
         alarm = dateutil.parser.parse(item['start']['dateTime'])
+        status['draw']['next'] = ((item['summary'][:15] + '...') if len(item['summary']) > 15 else item['summary']) + ' ' + dateutil.parser.parse(item['start']['dateTime']).strftime('%a at %H:%M')
         if alarm.isoweekday() not in settings['alarm']['days'].value:
             print('Event not in target days, skipping. %s' % item['summary'])
             continue
-        alarm - datetime.timedelta(minutes=settings['alarm']['offset'])
-        if (alarm.hour * 60) + alarm.minute < settings['alarm']['min']:
+        alarm -= datetime.timedelta(minutes=settings['alarm']['offset'])
+        if settings['alarm']['min'] != -1 and (alarm.hour * 60) + alarm.minute < settings['alarm']['min']:
             alarm = alarm.replace(hour=settings['alarm']['min'] // 60, minute=settings['alarm']['min'] % 60)
-        if (alarm.hour * 60) + alarm.minute > settings['alarm']['max']:
+        if settings['alarm']['max'] != -1 and (alarm.hour * 60) + alarm.minute > settings['alarm']['max']:
             alarm = alarm.replace(hour=settings['alarm']['max'] // 60, minute=settings['alarm']['max'] % 60)
         status['alarm'] = alarm
-        CLOCK.enterabs(alarm.timestamp() - 300, 1, task_alarm)
-        break
-
-
-def task_alarm():
-    print('ALAAAAAAAAAAAAAAAAAAAAAAAAAAARM')
-
+        status['draw']['alarm'] = alarm.strftime('%a at %H:%M')
+        return
+    # Only get here if no (correct) items
+    if 'alarm' in status:
+        del status['alarm']
+    if 'alarm' in status['draw']:
+        del status['draw']['alarm']
+    # todo: set RTC + 1 minute
 
 
 # ############################## Sequential code
@@ -466,53 +614,6 @@ else:  # If we don't have network
     h = draw_text('SmartAlarmClock', height=h, font=FONT_M)
     h = draw_text('And browse to:', height=h)
     h = draw_text(socket.gethostbyname(socket.gethostname()), height=h, font=FONT_M)  # Display IP
-
-
-# ####################################### BOOT SEQ, PART 4 - GPIO
-print('Boot sequence part 4 - GPIO (%s)' % datetime.datetime.now())
-# ############################## Imports
-# noinspection PyUnresolvedReferences
-import RPi.GPIO as GPIO
-# ############################## Definitions
-
-
-def int_btn_ok(chan):  # 'Interrupt' handler button of rot encoder
-    print('BTN: OK')
-    if not status['draw']['clock']:
-        return
-    if status['menu']:
-        status['draw']['option'] = None if status['menu'] == Menu.Exit else status['menu']
-        status['menu'] = None
-    elif status['draw']['option']:
-        status['draw']['option'] = None
-        save()
-    else:
-        status['menu'] = Menu.Show_IP
-
-
-def int_rot(chan):  # 'Interrupt' handler for A of rotary encoder
-    a = GPIO.input(RE_A)
-    if a:  # Since A triggers on falling edge, it should be 0, if not, debounce
-        return
-    b = GPIO.input(RE_B)  # To get the direction, pull B
-    print('Rotate: %s' % ('Right,+' if b else 'Left,-'))
-    if status['menu']:  # If we are in menu, go left or right
-        items = list(Menu)
-        i = items.index(status['menu'])
-        status['menu'] = items[(i + (1 if b else -1)) % len(items)]
-    elif status['draw']['option']:  # If we are doing a setting
-        if status['draw']['option'].value['setting']:
-            setting = status['draw']['option'].value['setting']
-            current = settings
-            for key in setting[:-1]:  # Go down the the sencond to last object and property name, so it can be set by reference
-                current = current[key]
-            current[setting[-1]] = clamp(current[setting[-1]] + (1 if b else -1))
-
-# ############################## Sequential code
-GPIO.setmode(GPIO.BCM)
-GPIO.setup([RE_A, RE_B, RE_S], GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.add_event_detect(RE_A, GPIO.FALLING, callback=int_rot, bouncetime=25)
-GPIO.add_event_detect(RE_S, GPIO.FALLING, callback=int_btn_ok, bouncetime=200)
 
 # ####################################### BOOT SEQ, PART 5 - Flask
 print('Boot sequence part 5 - Flask (%s)' % datetime.datetime.now())
@@ -597,6 +698,7 @@ def api_settings():  # GET: Dump the settings POST: Set settings
         settings.update(request.get_json())
         settings['alarm']['days'] = as_enum(settings['alarm']['days'])
         CLOCK.enter(0, 1, task_update_font)
+        set_volume()
         save()
         return 'OK'
 
