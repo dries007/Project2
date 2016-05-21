@@ -52,10 +52,12 @@
 			<div class="paragraph container">
 		<div class="custompan panel panel-primary">
 		  <div class="panel-heading">
-			<h3 class="panel-title">Panel title</h3>
+			<h3 class="panel-title">Voorwoord</h3>
 		  </div>
 		  <div class="panel-body">
-			Panel content
+			<p>Het idee van de SmartAlarmClock ontstond uit de frustratie tijdens het zetten van de wekker. Je moet namelijk eerst op je kalender kijken of je de volgende dag afspraken hebt en zoja om welk uur om te weten wanneer je de wekker moet zetten. Dit proces elke dag herhalen is niet echt efficiënt. 
+			De SmartAlarmClock probeert hiervoor een oplossing te bieden door de klok en de kalender op een slimme manier te combineren.</p>
+			<p>De SmartAlarmClock zal afhankelijk van informatie uit de Google kalender en de instellingen zelf het alarm instellen. Op deze manier kan de gebruiker zorgeloos slapen zonder ongerust te moeten zijn over het missen van een afspraak.</p>
 		  </div>
 		</div>
 	</div>
