@@ -27,3 +27,4 @@ Datum				| Entry
 16/05/2016  | Calendar API in main toevoegen en Verslag software deel
 18/05/2016	| Web interface combineren met python code, verslag en site
 19/05/2016  | Instellen alarm en opzoeken muziekstreams
+21/05/2016  | Verslag, Site, muziek en alarm

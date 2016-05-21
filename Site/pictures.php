@@ -37,9 +37,9 @@
 			</div>
 		</div>
 		<div class="col-md-4">
-			<img class="gridimage" src="foto's/ClockOn.jpg" alt="Werkende klok tijdens ontwikkeling.">
+			<img class="gridimage" src="foto's/Rotaryencoders.jpg" alt="Rotary encoders with push function">
 			<div class="caption">
-				<p class="contrasttext">Werkende klok tijdens ontwikkeling.</p>
+				<p class="contrasttext"> Image caption </p>
 			</div>
 		</div>
 	  </div>
@@ -80,6 +80,14 @@
 			<img class="gridimage" src="foto's/Rotaryencoders.jpg" alt="Rotary encoders with push function">
 			<div class="caption">
 				<p class="contrasttext"> Image caption </p>
+			</div>
+		</div>
+	  </div>
+	  <div class="row">
+		<div class="col-md-4">
+			<img class="gridimage" src="foto's/ClockOn.jpg" alt="Werkende klok tijdens ontwikkeling.">
+			<div class="caption">
+				<p class="contrasttext">Werkende klok tijdens ontwikkeling.</p>
 			</div>
 		</div>
 	  </div>

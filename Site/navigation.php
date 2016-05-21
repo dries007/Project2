@@ -17,7 +17,7 @@
 			  <ul class="dropdown-menu">
 				<li><a href="Software.php">Software</a></li>
 				<li><a href="Hardware.php">Hardware</a></li>
-				<li><a href="pictures.php">foto's</a></li>
+				<li><a href="pictures.php">Foto's</a></li>
 				<li role="separator" class="divider"></li>
 				<li><a href="about.php">Over ons</a></li>
 			  </ul>
