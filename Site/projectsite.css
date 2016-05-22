@@ -81,3 +81,16 @@ footer a {
 footer a:hover {
     color: inherit;
 }
+
+.carousel-inner img {
+    max-height: 450px;
+    margin: 0 auto;
+}
+
+.carousel-inner h3 {
+    color: white;
+    text-shadow: -1px -1px 0 #000,
+    1px -1px 0 #000,
+    -1px 1px 0 #000,
+    1px 1px 0 #000;
+}

@@ -1,6 +1,6 @@
 <?php include "head.php"; ?>
 <?php include "navigation.php"; ?>
-    <div class="">
+    <div class="container">
         <h2 class="paragraph contrasttext">Over ons</h2>
         <div class="paragraph ">
             <div class="panel panel-primary">

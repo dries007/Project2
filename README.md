@@ -1,19 +1,22 @@
 Project 2
 =========
-Alarm clock based on Raspberry Pi
+
+Smart alarm clock based on Raspberry Pi Zero
 
 Index
 -----
 
-- [Hardware](Hardware)
-- [Software](Software)
-- [Plan van aanpak](PLAN.md)
-- [Project voorstel](Projectvoorstel.1.docx)
-- [Gantt chart](Gantt_project2.gan)
-- [Aanpak](Voorbeeld.plan.van.aanpak.docx)
+- [Hardware](Hardware & Altium files)
+- [Fotos](Fotos)
+- [Website](Site)
+- [Software](Software & Configuration files)
 - [Logboek](LOG.md)
-- [ToDo](TODO.md)
-- [License](LICENSE.md)
+- [Poster](Poster.pdf)
+
+Software used
+-------------
+
+We mainly used Jetbrains products (PyCharm & PhpStorm) to write the code.
 
 License
 -------
