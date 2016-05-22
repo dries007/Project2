@@ -6,10 +6,10 @@ Smart alarm clock based on Raspberry Pi Zero
 Index
 -----
 
-- [Hardware](Hardware & Altium files)
+- [Hardware & Altium files](Hardware)
 - [Fotos](Fotos)
 - [Website](Site)
-- [Software](Software & Configuration files)
+- [Software & Configuration files](Software)
 - [Logboek](LOG.md)
 - [Poster](Documents/Poster.pdf)
 - [Verslag](Documents/Verslag.pdf)
