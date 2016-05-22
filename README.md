@@ -11,7 +11,9 @@ Index
 - [Website](Site)
 - [Software](Software & Configuration files)
 - [Logboek](LOG.md)
-- [Poster](Poster.pdf)
+- [Poster](Documents/Poster.pdf)
+- [Verslag](Documents/Verslag.pdf)
+- [Other documents](Documents)
 
 Software used
 -------------
