@@ -11,6 +11,7 @@ const GCAL_RESET = $('#gcal-reset');
 const GCAL_LINK = $('#gcal-link');
 const GCAL_LIST = $('#gcal-list');
 const GCAL_LIST_FORM = $('#gcal-list-form'); // todo: make useful
+const GCAL_POLL_FORM = $('#gcal-poll-form');
 const GCAL_RESET_FORM = $('#gcal-reset-form');
 const GCAL_LIST_ITEMS = $('#gcal-list-items');
 
@@ -288,6 +289,16 @@ function loadSettings()
     });
 }
 
+GCAL_POLL_FORM.submit(function ()
+{
+    $.post('/api/pollgcal', function (data)
+    {
+        loadStatus();
+        loadSettings();
+    });
+    return false;
+});
+
 GCAL_RESET_FORM.submit(function ()
 {
     $.post('/api/resetgcal', function (data)
@@ -297,6 +308,7 @@ GCAL_RESET_FORM.submit(function ()
     });
     return false;
 });
+
 
 //Global things
 TAB_STATUS.on('show.bs.tab', function ()

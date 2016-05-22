@@ -405,11 +405,13 @@ def truncate_scroll_text(string, length=30):
 def task_draw_clock():  # Task that draws to the LCD
     height = 0  # To make adding code easy, leftover/unnecessary height assignments are left in the code on purpose!
     if status['draw']['clock']:  # draw the main clock
-        height = draw_text(datetime.datetime.now().strftime('%A'), height=height, font=threadLocal.font_day)
-        height -= (threadLocal.font_day.get_height() * 0.1)
+        if settings['day']['enabled']:
+            height = draw_text(datetime.datetime.now().strftime('%A'), height=height, font=threadLocal.font_day)
+            height -= (threadLocal.font_day.get_height() * 0.1)
         height = draw_text(datetime.datetime.now().strftime(settings['clock']['format']), height=height, font=threadLocal.font_clock)
         height -= (threadLocal.font_clock.get_height() * 0.1)
-        height = draw_text(datetime.datetime.now().strftime(settings['date']['format']), height=height, font=threadLocal.date_clock)
+        if settings['date']['enabled']:
+            height = draw_text(datetime.datetime.now().strftime(settings['date']['format']), height=height, font=threadLocal.date_clock)
     if 'user_code' in status['gcal']:  # if we need to register the devie with gcal
         height = draw_text(status['gcal']['verification_url'], height=height, font=FONT_S)
         height = draw_text("Code: " + status['gcal']['user_code'], height=height, font=FONT_S)
@@ -557,6 +559,8 @@ def gcal_request_token():  # Do a new token request, overrides all old gcal data
 
 
 def gcal_get_events():  # Pull in new events, if token is expired / missing it will request a new one.
+    if not status['network'] or 'gcal' not in settings:
+        return
     if 'calendar_id' not in status['gcal'] or datetime.datetime.now() > status['gcal']['expires']:
         gcal_refresh()
     if 'access_token' not in status['gcal']:
@@ -672,6 +676,10 @@ def api_wifi():  # Get the list of wifi networks OR set the wifi profile setting
         f.close()
         save()
         attempt_connect()
+        if 'gcal' in settings:
+            gcal_get_events()  # if we have some gcal stuff saved, update the event list
+        else:
+            gcal_request_token()  # Start the token procedure
         if status['network']:  # Return a readable value
             return 'OK'
         return 'ERROR'
@@ -714,8 +722,15 @@ def api_settings():  # GET: Dump the settings POST: Set settings
         settings['alarm']['days'] = as_enum(settings['alarm']['days'])
         CLOCK.enter(0, 1, task_update_font)
         set_volume()
+        next_event()
         save()
         return 'OK'
+
+
+@app.route('/pollgcal', methods=['POST'])
+def api_pollgcal():  # Reset (and restart) the gcal linking process
+    gcal_get_events()
+    return 'OK'
 
 
 @app.route('/resetgcal', methods=['POST'])
