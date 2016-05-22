@@ -36,6 +36,7 @@ class Days(Enum):  # Days enum.
 status = {
     'booting': True,
     'network': False,
+    'skipped': False,
     'draw': {
         'clock': False,
         'option': None
@@ -182,10 +183,6 @@ with open(os.getenv('SDL_FBDEV'), 'wb') as outfile:  # Write to SDL_FBDEV (norma
     outfile.write(frame)
     outfile.close()
 
-if os.path.exists('/sys/class/net/wlan1'):  # todo: remove (also remove the profile!)
-    print('Debug wifi connection (%s)' % datetime.datetime.now())
-    subprocess.call(['netctl', 'start', 'wlan1-Kennes'])
-
 # ####################################### BOOT SEQ, PART 2 - GPIO
 print('Boot sequence part 2 - GPIO (%s)' % datetime.datetime.now())
 # ############################## Imports
@@ -215,12 +212,15 @@ def pre_boot_pwm():  # While booting, ramp up the LCD backlight from 0 to 100% o
 
 def int_btn_alarm(chan):  # 'Interrupt' handler of alarm button
     print('BTN: ALARM')
-    if 'alarm' in status:
+    if 'alarm' in status and not status['skipped']:
         if int(status['alarm'].replace(second=0, microsecond=0).timestamp() - datetime.datetime.now().replace(second=0, microsecond=0).timestamp()) < 600:
-            del status['alarm']
-            del status['draw']['alarm']
+            status['skipped'] = True
+            if 'alarm' in status['draw']:
+                del status['draw']['alarm']
             if status['streaming']:
                 stream_stop()
+                del status['alarm']
+                next_event()
             return
     if status['streaming']:
         stream_stop()
@@ -269,8 +269,8 @@ GPIO.setup(PWM_BG, GPIO.OUT)
 p = GPIO.PWM(PWM_BG, 250)
 p.start(0)
 GPIO.add_event_detect(RE_A, GPIO.FALLING, callback=int_rot, bouncetime=25)
-GPIO.add_event_detect(RE_S, GPIO.FALLING, callback=int_btn_ok, bouncetime=200)
-GPIO.add_event_detect(ALARM_S, GPIO.FALLING, callback=int_btn_alarm, bouncetime=200)
+GPIO.add_event_detect(RE_S, GPIO.FALLING, callback=int_btn_ok, bouncetime=500)
+GPIO.add_event_detect(ALARM_S, GPIO.FALLING, callback=int_btn_alarm, bouncetime=500)
 threading.Thread(target=pre_boot_pwm, name='PreBootPWM', daemon=True).start()  # Start the preboot LCD backlight ramp up
 
 # ####################################### BOOT SEQ, PART 3 - Pygame
@@ -369,27 +369,37 @@ def task_update_font():   # To make the font objects updatable, but not waste re
 
 
 def task_update_pwm():  # Task to do the background brightness, handles pulsing effect if required
-    bgt = settings['brightness']
-    bgt['target'] = clamp(bgt['target'], bgt['min'], bgt['max'])
-    if status['draw']['option'] == Menu.Set_Brightness:  # If we are drawing the brightness slider, give instant feedback
-        set_brightness(bgt['preference'])
-    else:  # If not drawing the brightness slider
-        if bgt['target'] != bgt['now']:  # If we are not at target level brightness
-            # Deviate predetermined step size from the current brightness towards the
-            if bgt['target'] < bgt['now']:
-                bgt['now'] = max(bgt['target'], bgt['now'] - bgt['step'], bgt['min'], 0)
-            else:
-                bgt['now'] = min(bgt['target'], bgt['now'] + bgt['step'], bgt['max'], 100)
-            set_brightness(bgt['now'])
-        else:  # if we are at target brightness
-            if status['pulsing']:  # if pulsing
-                if bgt['target'] <= bgt['min']:
-                    bgt['target'] = bgt['max']
+    if status['streaming']:
+        set_brightness(100)
+    else:
+        bgt = settings['brightness']
+        bgt['target'] = clamp(bgt['target'], bgt['min'], bgt['max'])
+        if status['draw']['option'] == Menu.Set_Brightness:  # If we are drawing the brightness slider, give instant feedback
+            set_brightness(bgt['preference'])
+        else:  # If not drawing the brightness slider
+            if bgt['target'] != bgt['now']:  # If we are not at target level brightness
+                # Deviate predetermined step size from the current brightness towards the
+                if bgt['target'] < bgt['now']:
+                    bgt['now'] = max(bgt['target'], bgt['now'] - bgt['step'], bgt['min'], 0)
                 else:
-                    bgt['target'] = bgt['min']
-            else:  # if not pulsing
-                bgt['target'] = bgt['preference']
+                    bgt['now'] = min(bgt['target'], bgt['now'] + bgt['step'], bgt['max'], 100)
+                set_brightness(bgt['now'])
+            else:  # if we are at target brightness
+                if status['pulsing']:  # if pulsing
+                    if bgt['target'] <= bgt['min']:
+                        bgt['target'] = bgt['max']
+                    else:
+                        bgt['target'] = bgt['min']
+                else:  # if not pulsing
+                    bgt['target'] = bgt['preference']
     CLOCK.enter(0.1, 2, task_update_pwm)
+
+
+def truncate_scroll_text(string, length=30):
+    if len(string) <= length:
+        return string
+    td = int(datetime.datetime.now().timestamp() * 2) % (len(string) - length + 1)
+    return string[td:td + length]
 
 
 def task_draw_clock():  # Task that draws to the LCD
@@ -423,10 +433,10 @@ def task_draw_clock():  # Task that draws to the LCD
             height = draw_text(status['draw']['alarm'], height=height, font=FONT_S)
         if 'next' in status['draw']:
             draw_text('\uf133', height=height, font=FONT_ICO, center=False)
-            height = draw_text(status['draw']['next'], height=height, font=FONT_S)
+            height = draw_text(truncate_scroll_text(status['draw']['next']), height=height, font=FONT_S)
         if 'title' in status['draw']:
             draw_text('\uf001', height=height, font=FONT_ICO, center=False)
-            height = draw_text(status['draw']['title'][:30], height=height, font=FONT_S)
+            height = draw_text(truncate_scroll_text(status['draw']['title']), height=height, font=FONT_S)
     pygame.display.update()  # Actually commit the LCD
     CLOCK.enter(0.5, 1, task_draw_clock)
 
@@ -454,17 +464,16 @@ def task_alarm_check():
         if int(status['alarm'].replace(second=0, microsecond=0).timestamp() - datetime.datetime.now().replace(second=0, microsecond=0).timestamp()) == 600:
             print('10 minute mark')
             status['pulsing'] = True
-        if int(status['alarm'].replace(second=0, microsecond=0).timestamp() - datetime.datetime.now().replace(second=0, microsecond=0).timestamp()) == 300:
-            print('5 minute mark')
-            status['pulsing'] = True
-        if int(status['alarm'].replace(second=0, microsecond=0).timestamp() - datetime.datetime.now().replace(second=0, microsecond=0).timestamp()) == 60:
-            print('1 minute mark')
-            status['pulsing'] = True
         if int(status['alarm'].replace(second=0, microsecond=0).timestamp() - datetime.datetime.now().replace(second=0, microsecond=0).timestamp()) == 0:
             print('alarm time')
-            status['pulsing'] = True
-            stream_start()
-            del status['draw']['alarm']
+            if status['skipped']:
+                status['skipped'] = False
+                del status['alarm']
+                next_event()
+            else:
+                stream_start()
+            if 'alarm' in status['draw']:
+                del status['draw']['alarm']
     CLOCK.enter(30, 1, task_alarm_check)
 
 
@@ -566,9 +575,13 @@ def gcal_get_events():  # Pull in new events, if token is expired / missing it w
         status['items'] = None
         return False
     status['items'] = out['items']
+    next_event()
+
+
+def next_event():
     for item in status['items']:
         alarm = dateutil.parser.parse(item['start']['dateTime'])
-        status['draw']['next'] = ((item['summary'][:15] + '...') if len(item['summary']) > 15 else item['summary']) + ' ' + dateutil.parser.parse(item['start']['dateTime']).strftime('%a at %H:%M')
+        status['draw']['next'] = item['summary'] + ' ' + dateutil.parser.parse(item['start']['dateTime']).strftime('%a at %H:%M')
         if alarm.isoweekday() not in settings['alarm']['days'].value:
             print('Event not in target days, skipping. %s' % item['summary'])
             continue
@@ -577,6 +590,9 @@ def gcal_get_events():  # Pull in new events, if token is expired / missing it w
             alarm = alarm.replace(hour=settings['alarm']['min'] // 60, minute=settings['alarm']['min'] % 60)
         if settings['alarm']['max'] != -1 and (alarm.hour * 60) + alarm.minute > settings['alarm']['max']:
             alarm = alarm.replace(hour=settings['alarm']['max'] // 60, minute=settings['alarm']['max'] % 60)
+        if alarm.timestamp() < datetime.datetime.now().timestamp():
+            print('Alarm time passed, skipping. %s' % item['summary'])
+            continue
         status['alarm'] = alarm
         status['draw']['alarm'] = alarm.strftime('%a at %H:%M')
         return
@@ -585,7 +601,6 @@ def gcal_get_events():  # Pull in new events, if token is expired / missing it w
         del status['alarm']
     if 'alarm' in status['draw']:
         del status['draw']['alarm']
-    # todo: set RTC + 1 minute
 
 
 # ############################## Sequential code
@@ -722,7 +737,7 @@ def api_status():  # GET: Dump the status POST: Set status
 
 # ############################## Sequential code
 print('Starting webserver... (%s)' % datetime.datetime.now())
-app.run(host='127.0.0.1', port=5000, debug=True, use_debugger=True, use_reloader=False)  # Blocking call! todo: disable debug!
+app.run(host='127.0.0.1', port=5000, use_reloader=False)  # Blocking call!
 
 print('EXIT: Flask died (%s)' % datetime.datetime.now())
 pygame.quit()

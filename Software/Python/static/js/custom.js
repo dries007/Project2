@@ -6,7 +6,6 @@ const TAB_CLOCK = $('a[data-toggle="tab"][href="#clock"]');
 const TAB_GCAL = $('a[data-toggle="tab"][href="#gcal"]');
 
 const MODAL = $('#modal');
-const DEBUG = $('#debug');
 
 const GCAL_RESET = $('#gcal-reset');
 const GCAL_LINK = $('#gcal-link');
@@ -70,7 +69,6 @@ function loadStatus()
     {
         console.log('Update status data.');
         status_data = data;
-        DEBUG.text(JSON.stringify(data, null, 4));
         if (data['booting']) return;
         MODAL.modal('hide');
         enableTabs();
@@ -223,7 +221,7 @@ const CLOCK_MAX_ENABLE = $("#clock-max-enable").click(toggleBnt);
 const CLOCK_DAYS_1 = $("#clock-days-1");
 const CLOCK_DAYS_2 = $("#clock-days-2");
 const CLOCK_DAYS_3 = $("#clock-days-3");
-//const ALARMTYPE = $("#alarmtype");
+const CLOCK_STREAM = $("#clock-stream");
 
 CLOCK_FORM.submit(function ()
 {
@@ -249,7 +247,8 @@ CLOCK_FORM.submit(function ()
                     'offset': parseInt(CLOCK_OFFSET.val()),
                     'min': CLOCK_MIN_ENABLE.hasClass('btn-success') ? timeToMin(CLOCK_MIN.val()) : -1,
                     'max': CLOCK_MAX_ENABLE.hasClass('btn-success') ? timeToMin(CLOCK_MAX.val()) : -1,
-                    'days': $('input:radio[name="clock-days"]:checked').val()
+                    'days': $('input:radio[name="clock-days"]:checked').val(),
+                    'stream': CLOCK_STREAM.val()
                 }
             }),
         contentType: 'application/json',
@@ -285,6 +284,7 @@ function loadSettings()
         if (data['alarm']['days'] == 'Days.Weekdays') CLOCK_DAYS_1.prop('checked', true);
         else if (data['alarm']['days'] == 'Days.Weekends') CLOCK_DAYS_2.prop('checked', true);
         else if (data['alarm']['days'] == 'Days.Both') CLOCK_DAYS_3.prop('checked', true);
+        CLOCK_STREAM.val(data['alarm']['stream']);
     });
 }
 

@@ -51,7 +51,8 @@
         <div class="tab-content">
             <!-- Status panel -->
             <div role="tabpanel" class="tab-pane fade in active" id="status">
-                <pre id="debug">No data yet...</pre>
+                <p>Welcome to the SmartAlarmClock web interface. You can go to the right tab once connection has been made with the backend.</p>
+                <p>Some operations (like switching wifi networks) may require you to reconnect to the right IP address (displayed on the LCD module of the clock).</p>
             </div>
             <!-- Wifi panel -->
             <div role="tabpanel" class="tab-pane fade" id="wifi">
@@ -204,18 +205,19 @@
                             </label>
                         </div>
                     </div>
-                    <!--
                     <div class="form-group">
-                        <label for="Alarmtype" class="col-sm-3 control-label">Alarm type</label>
+                        <label for="clock-stream" class="col-sm-3 control-label">Stream source</label>
                         <div class="col-sm-9">
-                            <select class="form-control" id="alarmtype">
-                                <option value="music" selected>Music file</option>
-                                <option value="stream">Stream</option>
-                                <option value="predef">Build in soundeffects</option>
+                            <select class="form-control" id="clock-stream">
+                                <option value="MNM">MNM</option>
+                                <option value="MNM Hits">MNM Hits</option>
+                                <option value="Studio Brussel">Studio Brussel</option>
+                                <option value="Klara">Klara</option>
+                                <option value="Radio 1">Radio 1</option>
+                                <option value="Radio 2 Antwerpen">Radio 2 Antwerpen</option>
                             </select>
                         </div>
                     </div>
-                    -->
                     <button type="submit" class="btn btn-block btn-success">Save</button>
                 </form>
             </div>
