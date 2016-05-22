@@ -28,3 +28,4 @@ Datum				| Entry
 18/05/2016	| Web interface combineren met python code, verslag en site
 19/05/2016  | Instellen alarm en opzoeken muziekstreams
 21/05/2016  | Verslag, Site, muziek en alarm
+22/05/2016  | Opkuisen van verslag, volledige test + fouten oplossen
