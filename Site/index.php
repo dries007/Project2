@@ -37,7 +37,6 @@
 <!--                    </div>-->
 <!--                </div>-->
             </div>
-
             <!-- Controls -->
             <a class="left carousel-control" href="#carousel-example-generic" role="button" data-slide="prev">
                 <span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span>
@@ -49,7 +48,7 @@
             </a>
         </div>
         <div class="paragraph">
-            <div class="custompan panel panel-primary">
+            <div class="panel panel-primary">
                 <div class="panel-heading">
                     <h3 class="panel-title">Voorwoord</h3>
                 </div>

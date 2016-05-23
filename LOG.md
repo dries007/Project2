@@ -1,7 +1,7 @@
 Project Log
 ===========
 
-Datum				| Entry
+Datum		| Entry
 ------------|---------------------------------------
 18/02/2016  | LCD's & DAC besteld
 22/02/2016  | Bestellen overige componenten, verzamelen datatsheets en plan van aanpak
@@ -29,3 +29,4 @@ Datum				| Entry
 19/05/2016  | Instellen alarm en opzoeken muziekstreams
 21/05/2016  | Verslag, Site, muziek en alarm
 22/05/2016  | Opkuisen van verslag, volledige test + fouten oplossen
+23/05/2016  | Maken presentatie, test demo
